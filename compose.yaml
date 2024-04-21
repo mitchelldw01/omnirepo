@@ -1,0 +1,22 @@
+services:
+  minio:
+    image: minio/minio:RELEASE.2024-04-06T05-26-02Z
+    container_name: omni-minio
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address :9001
+    healthcheck:
+      interval: 10s
+      retries: 6
+      test: mc ready local
+
+  dynamodb:
+    image: amazon/dynamodb-local
+    container_name: omni-dynamodb
+    ports:
+      - 8000:8000
+    command: -jar DynamoDBLocal.jar -inMemory -sharedDb

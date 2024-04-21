@@ -1,2 +1,8 @@
 /omni
 /omni.exe
+
+.env
+.env.*
+!.env.example
+
+.secrets
