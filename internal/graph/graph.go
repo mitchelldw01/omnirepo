@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mitchelldw01/omnirepo/usercfg"
@@ -24,12 +25,12 @@ type DependencyGraph struct {
 	targetConfigs map[string]usercfg.TargetConfig
 }
 
-func NewDependencyGraph(ex Executor, cfgs map[string]usercfg.TargetConfig) *DependencyGraph {
+func NewDependencyGraph(ex Executor, targetCfgs map[string]usercfg.TargetConfig) *DependencyGraph {
 	return &DependencyGraph{
 		Nodes:         map[string]*Node{},
 		Dependencies:  map[string]map[string]struct{}{},
 		executor:      ex,
-		targetConfigs: cfgs,
+		targetConfigs: targetCfgs,
 	}
 }
 
@@ -141,4 +142,70 @@ func (dg *DependencyGraph) validateNodes() error {
 	}
 
 	return nil
+}
+
+// Executes tasks in topological order. The following process is repeated until complete...
+//  1. All nodes with 0 indegree are executed
+//  2. When a task completes, the indegrees of all dependencies are decremented.
+func (dg *DependencyGraph) ExecuteTasks() {
+	var wg sync.WaitGroup
+	ch, numActive, t := make(chan string), 0, time.Now()
+
+	for _, node := range dg.Nodes {
+		if isActive := dg.processNode(node, &wg, ch); isActive {
+			numActive++
+		}
+	}
+
+	deps := dg.invertDependencies()
+	for id := range ch {
+		numActive--
+		for depId := range deps[id] {
+			depNode := dg.Nodes[depId]
+			depNode.decrementIndegree()
+			if isActive := dg.processNode(depNode, &wg, ch); isActive {
+				numActive++
+			}
+		}
+
+		if numActive == 0 {
+			close(ch)
+		}
+	}
+
+	wg.Wait()
+	dg.executor.CleanUp(t)
+}
+
+func (dg *DependencyGraph) invertDependencies() map[string]map[string]struct{} {
+	dependents := map[string]map[string]struct{}{}
+
+	for id, deps := range dg.Dependencies {
+		for depId := range deps {
+			ids, ok := dependents[depId]
+			if !ok {
+				ids = map[string]struct{}{}
+				dependents[depId] = ids
+			}
+			ids[id] = struct{}{}
+		}
+	}
+
+	return dependents
+}
+
+func (dg *DependencyGraph) processNode(node *Node, wg *sync.WaitGroup, ch chan string) bool {
+	if node.getIndegree() != 0 {
+		return false
+	}
+
+	wg.Add(1)
+	go func(node *Node) {
+		defer wg.Done()
+		deps := dg.Dependencies[node.Id]
+		dg.executor.ExecuteTask(node, deps)
+		ch <- node.Id
+	}(node)
+
+	return true
 }
