@@ -4,6 +4,11 @@ import (
 	"maps"
 	"path/filepath"
 
+	"github.com/mitchelldw01/omnirepo/internal/cache"
+	"github.com/mitchelldw01/omnirepo/internal/exec"
+	"github.com/mitchelldw01/omnirepo/internal/graph"
+	"github.com/mitchelldw01/omnirepo/internal/service/aws"
+	"github.com/mitchelldw01/omnirepo/internal/service/sys"
 	"github.com/mitchelldw01/omnirepo/usercfg"
 )
 
@@ -42,7 +47,17 @@ func runTreeCommand(tasks []string, opts Options) error {
 }
 
 func runRunCommand(tasks []string, opts Options) error {
-	_, _ = tasks, opts
+	workCfg, targetCfgs, err := parseConfigs(opts.Target)
+	if err != nil {
+		return err
+	}
+
+	graph, err := createDependencyGraph(workCfg, targetCfgs, tasks, opts)
+	if err != nil {
+		return err
+	}
+
+	graph.ExecuteTasks()
 	return nil
 }
 
@@ -66,34 +81,90 @@ func parseConfigs(dir string) (usercfg.WorkspaceConfig, map[string]usercfg.Targe
 }
 
 func parseAllTargetConfigs(dirs []string) (map[string]usercfg.TargetConfig, error) {
-	cfgs := make(map[string]usercfg.TargetConfig, len(dirs))
+	targetCfgs := make(map[string]usercfg.TargetConfig, len(dirs))
 
 	for _, dir := range dirs {
 		cfg, err := usercfg.NewTargetConfig(dir)
 		if err != nil {
 			return nil, err
 		}
-		cfgs[filepath.Clean(dir)] = cfg
+		targetCfgs[filepath.Clean(dir)] = cfg
 	}
 
-	return cfgs, nil
+	return targetCfgs, nil
 }
 
 func parseDependentTargetConfigs(dir string) (map[string]usercfg.TargetConfig, error) {
-	cfgs := map[string]usercfg.TargetConfig{}
+	targetCfgs := map[string]usercfg.TargetConfig{}
 	cfg, err := usercfg.NewTargetConfig(dir)
 	if err != nil {
 		return nil, err
 	}
-	cfgs[filepath.Clean(dir)] = cfg
+	targetCfgs[filepath.Clean(dir)] = cfg
 
 	for _, dep := range cfg.Dependencies {
 		depCfgs, err := parseDependentTargetConfigs(dep)
 		if err != nil {
 			return nil, err
 		}
-		maps.Copy(cfgs, depCfgs)
+		maps.Copy(targetCfgs, depCfgs)
 	}
 
-	return cfgs, nil
+	return targetCfgs, nil
+}
+
+func createDependencyGraph(
+	workCfg usercfg.WorkspaceConfig,
+	targetCfgs map[string]usercfg.TargetConfig,
+	tasks []string,
+	opts Options,
+) (*graph.DependencyGraph, error) {
+	var ex graph.Executor
+	var err error
+	if workCfg.RemoteCache.Bucket == "" {
+		ex, err = createSystemExecutor(targetCfgs, opts.NoCache)
+	} else {
+		ex, err = createAwsExecutor(workCfg, targetCfgs, opts.NoCache)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	graph := graph.NewDependencyGraph(ex, targetCfgs)
+	if err := graph.PopulateNodes(tasks, opts.Target); err != nil {
+		return nil, err
+	}
+
+	return graph, nil
+}
+
+func createSystemExecutor(targetCfgs map[string]usercfg.TargetConfig, noCache bool) (graph.Executor, error) {
+	trans := sys.NewSystemTransport()
+	locker, err := sys.NewSystemLock()
+	if err != nil {
+		return nil, err
+	}
+
+	cacher := cache.NewCache(trans, locker, targetCfgs)
+	return exec.NewExecutor(cacher, noCache), nil
+}
+
+func createAwsExecutor(
+	workCfg usercfg.WorkspaceConfig,
+	targetCfg map[string]usercfg.TargetConfig,
+	noCache bool,
+) (graph.Executor, error) {
+	client, err := aws.NewAwsClient(workCfg.Name, workCfg.RemoteCache.Region)
+	if err != nil {
+		return nil, err
+	}
+	trans := aws.NewAwsTransport(client, workCfg.Name, workCfg.RemoteCache.Bucket)
+
+	locker, err := aws.NewAwsLock(workCfg.RemoteCache)
+	if err != nil {
+		return nil, err
+	}
+
+	cacher := cache.NewCache(trans, locker, targetCfg)
+	return exec.NewExecutor(cacher, noCache), nil
 }

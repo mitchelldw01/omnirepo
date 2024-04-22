@@ -26,8 +26,21 @@ func NewNode(name, dir string, pl usercfg.PipelineConfig) *Node {
 	}
 }
 
+func (node *Node) getIndegree() int {
+	node.mutex.RLock()
+	indegree := node.indegree
+	node.mutex.RUnlock()
+	return indegree
+}
+
 func (n *Node) incrementIndegree() {
 	n.mutex.Lock()
 	n.indegree += 1
 	n.mutex.Unlock()
+}
+
+func (node *Node) decrementIndegree() {
+	node.mutex.Lock()
+	node.indegree -= 1
+	node.mutex.Unlock()
 }
