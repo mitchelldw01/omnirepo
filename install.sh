@@ -4,7 +4,7 @@ set -e
 
 GITHUB_REPO="mitchelldw01/omnirepo"
 INSTALL_PATH="/usr/local/bin"
-RELEASE_TAG="v0.0.1"
+RELEASE_TAG=$(curl -s https://api.github.com/repos/$GITHUB_REPO/releases/latest | grep '"tag_name":' | awk -F '"' '{print $4}')
 
 OS=$(uname | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
