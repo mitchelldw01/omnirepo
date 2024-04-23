@@ -1,6 +1,7 @@
 # Omnirepo
 
 ![test workflow](https://github.com/mitchelldw01/omnirepo/actions/workflows/test.yaml/badge.svg)
+![release workflow](https://github.com/mitchelldw01/omnirepo/actions/workflows/release.yaml/badge.svg)
 ![lint workflow](https://github.com/mitchelldw01/omnirepo/actions/workflows/lint.yaml/badge.svg)
 
 Omnirepo is a task runner that executes tasks in topological order, parallelizing them when possible, according to the dependencies between them. It was inspired by monorepo tools like [Turborepo](https://turbo.build/repo) and [Bazel](https://bazel.build), but is flexible enough to be used with any programming language(s).
