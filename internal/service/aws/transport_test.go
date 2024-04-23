@@ -18,12 +18,14 @@ func TestReader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if err := tester.createTestObject(); err != nil {
 		t.Fatal(err)
 	}
 
-	trans := omniAws.NewAwsTransport(tester.client, project, bucket)
+	trans, err := omniAws.NewAwsTransport(tester.client, project, bucket)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r, err := trans.Reader(key)
 	if err != nil {
 		t.Fatal(err)
@@ -45,12 +47,14 @@ func TestWriter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if err := tester.deleteTestObject(); err != nil {
 		t.Fatal(err)
 	}
 
-	trans := omniAws.NewAwsTransport(tester.client, project, bucket)
+	trans, err := omniAws.NewAwsTransport(tester.client, project, bucket)
+	if err != nil {
+		t.Fatal(err)
+	}
 	w, err := trans.Writer(key)
 	if err != nil {
 		t.Fatal(err)

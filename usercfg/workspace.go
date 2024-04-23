@@ -14,8 +14,10 @@ type WorkspaceConfig struct {
 }
 
 type RemoteCacheConfig struct {
-	Bucket string `yaml:"bucket"`
-	Region string `yaml:"region"`
+	Enabled bool   `yaml:"enabled"`
+	Bucket  string `yaml:"bucket"`
+	Table   string `yaml:"table"`
+	Region  string `yaml:"region"`
 }
 
 func NewWorkspaceConfig() (WorkspaceConfig, error) {

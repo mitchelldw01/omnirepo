@@ -121,7 +121,7 @@ func createDependencyGraph(
 ) (*graph.DependencyGraph, error) {
 	var ex graph.Executor
 	var err error
-	if workCfg.RemoteCache.Bucket == "" {
+	if workCfg.RemoteCache.Enabled {
 		ex, err = createSystemExecutor(targetCfgs, opts.NoCache)
 	} else {
 		ex, err = createAwsExecutor(workCfg, targetCfgs, opts.NoCache)
@@ -154,17 +154,34 @@ func createAwsExecutor(
 	targetCfg map[string]usercfg.TargetConfig,
 	noCache bool,
 ) (graph.Executor, error) {
-	client, err := aws.NewAwsClient(workCfg.Name, workCfg.RemoteCache.Region)
+	trans, err := createAwsTransport(workCfg)
 	if err != nil {
 		return nil, err
 	}
-	trans := aws.NewAwsTransport(client, workCfg.Name, workCfg.RemoteCache.Bucket)
 
-	locker, err := aws.NewAwsLock(workCfg.RemoteCache)
+	locker, err := createAwsLock(workCfg)
 	if err != nil {
 		return nil, err
 	}
 
 	cacher := cache.NewCache(trans, locker, targetCfg)
 	return exec.NewExecutor(cacher, noCache), nil
+}
+
+func createAwsTransport(workCfg usercfg.WorkspaceConfig) (aws.AwsTransport, error) {
+	s3Client, err := aws.NewAwsS3Client(workCfg.Name, workCfg.RemoteCache.Region)
+	if err != nil {
+		return aws.AwsTransport{}, err
+	}
+	trans, err := aws.NewAwsTransport(s3Client, workCfg.Name, workCfg.RemoteCache.Bucket)
+	return trans, err
+}
+
+func createAwsLock(workCfg usercfg.WorkspaceConfig) (aws.AwsLock, error) {
+	dynamoClient, err := aws.NewAwsDynamoClient(workCfg.Name, workCfg.RemoteCache.Region)
+	if err != nil {
+		return aws.AwsLock{}, err
+	}
+	locker, err := aws.NewAwsLock(dynamoClient, workCfg.Name, workCfg.RemoteCache.Table)
+	return locker, err
 }
