@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -14,16 +15,23 @@ import (
 
 type AwsTransport struct {
 	client  *s3.Client
-	bucket  string
 	project string
+	bucket  string
 }
 
-func NewAwsTransport(client *s3.Client, project, bucket string) AwsTransport {
+func NewAwsTransport(client *s3.Client, project, bucket string) (AwsTransport, error) {
+	if project == "" {
+		return AwsTransport{}, errors.New("remote caching requires a project name to be defined")
+	}
+	if bucket == "" {
+		return AwsTransport{}, errors.New("remote caching requires a bucket name to be defined")
+	}
+
 	return AwsTransport{
 		client:  client,
-		bucket:  bucket,
 		project: project,
-	}
+		bucket:  bucket,
+	}, nil
 }
 
 func (t AwsTransport) Reader(key string) (io.ReadCloser, error) {

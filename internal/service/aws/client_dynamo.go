@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
-func NewAwsClient(project, region string) (*s3.Client, error) {
+func NewAwsDynamoClient(project, region string) (*dynamodb.Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -22,5 +22,5 @@ func NewAwsClient(project, region string) (*s3.Client, error) {
 		cfg.Region = region
 	}
 
-	return s3.NewFromConfig(cfg), nil
+	return dynamodb.NewFromConfig(cfg), nil
 }

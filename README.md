@@ -5,7 +5,7 @@
 
 Omnirepo is a task runner that executes tasks in topological order, parallelizing them when possible, according to the dependencies between them. It was inspired by monorepo tools like [Turborepo](https://turbo.build/repo) and [Bazel](https://bazel.build), but is flexible enough to be used with any programming language(s).
 
-It uses caching to prevent rerunning tasks when nothing has changed, and to restore artifacts produced by tasks. In addition to local caching with the user's file system, remote caching is possible with [AWS S3](https://aws.amazon.com/s3/). Remote caching enables shared caches between different environments such as CI pipelines.
+It uses caching to prevent rerunning tasks when nothing has changed, and to restore artifacts produced by tasks. In addition to local caching with the user's file system, remote caching is possible with AWS [S3](https://aws.amazon.com/s3/) and [DynamoDB](https://aws.amazon.com/dynamodb/). Remote caching enables shared caches between different environments such as CI pipelines.
 
 ## Installation
 
@@ -66,7 +66,9 @@ Configuration options for the workspace are defined in an `omni-workspace.yaml` 
 - `name`: The name of the project. This is only required when remote caching is enabled.
 - `targets`: Paths to the target directories in the workspace.
 - `remoteCache`: Remote cache configuration options.
-    - `bucket`: The name of the S3 bucket to use for caching. You can omit this property to use local (file system) caching. Omnirepo will not create the bucket for you.
+    - `enabled`: Indicates whether remote caching is enabled.
+    - `bucket`: The name of the S3 bucket to use for caching. Omnirepo will not create this bucket for you.
+    - `table`: The name of the DynamoDB table to use for cache locking. Omnirepo will not create this table for you.
     - `region`: The AWS region to use. You can omit this property to use the default region.
 
 ```yaml

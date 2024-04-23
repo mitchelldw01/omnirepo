@@ -20,3 +20,7 @@ services:
     ports:
       - 8000:8000
     command: -jar DynamoDBLocal.jar -inMemory -sharedDb
+    healthcheck:
+      interval: 10s
+      retries: 6
+      test: curl http://localhost:8000
