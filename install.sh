@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+set -e
+
+GITHUB_REPO="mitchelldw01/omnirepo"
+INSTALL_PATH="/usr/local/bin"
+RELEASE_TAG="v0.0.1"
+
+OS=$(uname | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+
+case $ARCH in
+    arm64)
+        ARCH="arm64"
+        ;;
+    aarch64)
+        ARCH="arm64"
+        ;;
+    x86_64)
+        ARCH="x86_64"
+        ;;
+    i686)
+        ARCH="i386"
+        ;;
+    *)
+        echo "Unsupported architecture: $ARCH"
+        exit 1
+        ;;
+esac
+
+if [[ "$OS" != "darwin" && "$OS" != "linux" ]]; then
+    echo "Unsupported OS: $OS"
+    exit 1
+fi
+
+FILENAME="omnirepo_${OS}_${ARCH}.tar.gz"
+BINARY_URL="https://github.com/$GITHUB_REPO/releases/download/$RELEASE_TAG/$FILENAME"
+
+TEMP_DIR=$(mktemp -d)
+cd "$TEMP_DIR"
+
+curl -L -o "$FILENAME" "$BINARY_URL"
+tar -zxf "$FILENAME"
+sudo mv omni "$INSTALL_PATH"
+
+cd - > /dev/null
+rm -r "$TEMP_DIR"
+echo "Installation completed successfully."
