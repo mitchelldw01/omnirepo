@@ -1,6 +1,8 @@
 package run
 
 import (
+	"encoding/json"
+	"fmt"
 	"maps"
 	"path/filepath"
 
@@ -38,12 +40,24 @@ func runUnlockCommand() error {
 }
 
 func runTreeCommand(tasks []string, opts Options) error {
-	_, _ = tasks, opts
-	_, _, err := parseConfigs(opts.Target)
+	workCfg, targetCfgs, err := parseConfigs(opts.Target)
 	if err != nil {
 		return err
 	}
+
+	graph, err := createDependencyGraph(workCfg, targetCfgs, tasks, opts)
+	if err != nil {
+		return err
+	}
+
+	prettyJson, err := json.MarshalIndent(graph.ToMap(), "", "  ")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(prettyJson))
 	return nil
+
 }
 
 func runRunCommand(tasks []string, opts Options) error {

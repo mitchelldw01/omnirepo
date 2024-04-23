@@ -260,3 +260,123 @@ func TestPopulateNodes(t *testing.T) {
 		})
 	}
 }
+
+func TestFormat(t *testing.T) {
+	testCases := []struct {
+		name          string
+		targetConfigs map[string]usercfg.TargetConfig
+		tasks         []string
+		expected      map[string]interface{}
+	}{
+		{
+			name: "one config with zero dependencies",
+			targetConfigs: map[string]usercfg.TargetConfig{
+				"foo": {
+					Pipeline: map[string]usercfg.PipelineConfig{
+						"test":  {},
+						"build": {},
+					},
+				},
+			},
+			tasks: []string{"test", "build"},
+			expected: map[string]interface{}{
+				"foo:test":  map[string]interface{}{},
+				"foo:build": map[string]interface{}{},
+			},
+		},
+		{
+			name: "two configs with one ancestor dependency",
+			targetConfigs: map[string]usercfg.TargetConfig{
+				"foo": {
+					Dependencies: []string{"bar"},
+					Pipeline: map[string]usercfg.PipelineConfig{
+						"test": {
+							DependsOn: []string{"^test"},
+						},
+					},
+				},
+				"bar": {
+					Pipeline: map[string]usercfg.PipelineConfig{
+						"test": {},
+					},
+				},
+			},
+			tasks: []string{"test"},
+			expected: map[string]interface{}{
+				"foo:test": map[string]interface{}{
+					"bar:test": map[string]interface{}{},
+				},
+			},
+		},
+		{
+			name: "complex dependency tree",
+			targetConfigs: map[string]usercfg.TargetConfig{
+				"foo": {
+					Dependencies: []string{"bar"},
+					Pipeline: map[string]usercfg.PipelineConfig{
+						"test": {
+							DependsOn: []string{"^test"},
+						},
+					},
+				},
+				"bar": {
+					Dependencies: []string{"baz", "quux"},
+					Pipeline: map[string]usercfg.PipelineConfig{
+						"test": {
+							DependsOn: []string{"^test"},
+						},
+					},
+				},
+				"baz": {
+					Pipeline: map[string]usercfg.PipelineConfig{
+						"test": {},
+					},
+				},
+				"qux": {
+					Dependencies: []string{"corge"},
+					Pipeline: map[string]usercfg.PipelineConfig{
+						"test": {
+							DependsOn: []string{"^test"},
+						},
+					},
+				},
+				"quux": {
+					Pipeline: map[string]usercfg.PipelineConfig{
+						"test": {},
+					},
+				},
+				"corge": {
+					Pipeline: map[string]usercfg.PipelineConfig{
+						"test": {},
+					},
+				},
+			},
+			tasks: []string{"test"},
+			expected: map[string]interface{}{
+				"foo:test": map[string]interface{}{
+					"bar:test": map[string]interface{}{
+						"baz:test":  map[string]interface{}{},
+						"quux:test": map[string]interface{}{},
+					},
+				},
+				"qux:test": map[string]interface{}{
+					"corge:test": map[string]interface{}{},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			graph := graph.NewDependencyGraph(executor{}, tc.targetConfigs)
+			if err := graph.PopulateNodes(tc.tasks, ""); err != nil {
+				t.Fatalf("expected nil, got %v", err)
+			}
+
+			tree := graph.ToMap()
+			if !reflect.DeepEqual(tc.expected, tree) {
+				t.Fatalf("expected %v, got %v", tc.expected, tree)
+			}
+		})
+	}
+}
