@@ -144,6 +144,50 @@ func (dg *DependencyGraph) validateNodes() error {
 	return nil
 }
 
+func (dg *DependencyGraph) ToMap() map[string]interface{} {
+	tree := map[string]interface{}{}
+	for key, deps := range dg.Dependencies {
+		subTree := map[string]interface{}{}
+		tree[key] = subTree
+		dg.formatDependencyTree(subTree, deps)
+	}
+
+	depths := make(map[string]int, len(tree))
+	dg.computeBranchDepths(tree, depths, 0)
+	dg.pruneDependencyTree(tree, depths, 0)
+
+	return tree
+}
+
+func (dg *DependencyGraph) formatDependencyTree(tree map[string]interface{}, deps map[string]struct{}) {
+	for key := range deps {
+		subTree := map[string]interface{}{}
+		tree[key] = subTree
+		dg.formatDependencyTree(subTree, dg.Dependencies[key])
+	}
+}
+
+func (dg *DependencyGraph) computeBranchDepths(tree map[string]interface{}, depths map[string]int, depth int) {
+	for key, subTree := range tree {
+		if depth > depths[key] {
+			depths[key] = depth
+		}
+
+		dg.computeBranchDepths(subTree.(map[string]interface{}), depths, depth+1)
+	}
+}
+
+func (dg *DependencyGraph) pruneDependencyTree(tree map[string]interface{}, depths map[string]int, depth int) {
+	for key, subTree := range tree {
+		if depth != depths[key] {
+			delete(tree, key)
+			continue
+		}
+
+		dg.pruneDependencyTree(subTree.(map[string]interface{}), depths, depth+1)
+	}
+}
+
 // Executes tasks in topological order. The following process is repeated until complete...
 //  1. All nodes with 0 indegree are executed
 //  2. When a task completes, the indegrees of all dependencies are decremented.
