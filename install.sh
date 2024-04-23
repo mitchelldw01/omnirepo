@@ -45,4 +45,4 @@ sudo mv omni "$INSTALL_PATH"
 
 cd - > /dev/null
 rm -r "$TEMP_DIR"
-echo "Installation completed successfully."
+printf '\033[1;32mSuccess!\033[0m Run '"'"'omni --help'"'"' to verify installation.\n'
