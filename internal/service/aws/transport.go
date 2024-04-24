@@ -36,22 +36,22 @@ type AwsTransport struct {
 	bucket  string
 }
 
-func NewAwsTransport(client *s3.Client, project, bucket string) (AwsTransport, error) {
+func NewAwsTransport(client *s3.Client, project, bucket string) (*AwsTransport, error) {
 	if project == "" {
-		return AwsTransport{}, errors.New("remote caching requires a project name to be defined")
+		return nil, errors.New("remote caching requires a project name to be defined")
 	}
 	if bucket == "" {
-		return AwsTransport{}, errors.New("remote caching requires a bucket name to be defined")
+		return nil, errors.New("remote caching requires a bucket name to be defined")
 	}
 
-	return AwsTransport{
+	return &AwsTransport{
 		client:  client,
 		project: project,
 		bucket:  bucket,
 	}, nil
 }
 
-func (t AwsTransport) Reader(key string) (io.ReadCloser, error) {
+func (t *AwsTransport) Reader(key string) (io.ReadCloser, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
@@ -66,7 +66,7 @@ func (t AwsTransport) Reader(key string) (io.ReadCloser, error) {
 	return res.Body, nil
 }
 
-func (t AwsTransport) Writer(key string) (io.WriteCloser, error) {
+func (t *AwsTransport) Writer(key string) (io.WriteCloser, error) {
 	tmp, err := os.CreateTemp("", "aws-")
 	if err != nil {
 		return nil, fmt.Errorf("failed to write cache asset: %v", err)
