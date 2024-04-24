@@ -148,7 +148,7 @@ Options must be provided before the command and/or arguments. Otherwise, the opt
 
 ### Commands
 
-- `unlock`: Forcully unlock the cache. This command should only be used when you're positive that the cache lock was not freed properly.
+- `unlock`: Forcefully unlock the cache. This command should only be used when you're positive that the cache lock was not freed properly.
 - `tree` Show the dependency graph as JSON. This command can be useful for debugging or visualizing a complicated dependency tree.
 - `run` Run tasks (default). The only time this needs to be used explicilty is when you want to run a task that's name conflicts with another command.
 
