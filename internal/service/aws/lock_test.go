@@ -21,7 +21,7 @@ func TestLock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	locker, err := omniAws.NewAwsLock(tester.client, project, table)
+	lock, err := omniAws.NewAwsLock(tester.client, project, table)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +31,7 @@ func TestLock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := locker.Lock(); err != nil {
+		if err := lock.Lock(); err != nil {
 			t.Fatal(err)
 		}
 
@@ -50,7 +50,7 @@ func TestLock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := locker.Lock(); err != nil {
+		if err := lock.Lock(); err != nil {
 			t.Fatal(err)
 		}
 
@@ -69,7 +69,7 @@ func TestLock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := locker.Lock(); err == nil {
+		if err := lock.Lock(); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
@@ -82,7 +82,7 @@ func TestUnlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	locker, err := omniAws.NewAwsLock(tester.client, project, table)
+	lock, err := omniAws.NewAwsLock(tester.client, project, table)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestUnlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := locker.Unlock(); err != nil {
+		if err := lock.Unlock(); err != nil {
 			t.Fatal(err)
 		}
 
@@ -111,7 +111,7 @@ func TestUnlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := locker.Unlock(); err == nil {
+		if err := lock.Unlock(); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
@@ -219,20 +219,20 @@ func (lt *lockTester) readTestLock() (bool, error) {
 	defer cancel()
 
 	input := lt.getReadTestLockInput()
-	result, err := lt.client.GetItem(ctx, &input)
+	res, err := lt.client.GetItem(ctx, &input)
 	if err != nil {
 		return false, fmt.Errorf("failed to read test lock: %v", err)
 	}
-	if result.Item == nil {
+	if res.Item == nil {
 		return false, nil
 	}
 
-	attributeValue, exists := result.Item["LockAcquired"]
+	attr, exists := res.Item["LockAcquired"]
 	if !exists {
 		return false, nil
 	}
 
-	lockAcquired := attributeValue.(*types.AttributeValueMemberBOOL)
+	lockAcquired := attr.(*types.AttributeValueMemberBOOL)
 	return lockAcquired.Value, nil
 }
 

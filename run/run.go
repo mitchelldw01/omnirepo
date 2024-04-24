@@ -205,8 +205,8 @@ func createAwsExecutor(
 		return nil, err
 	}
 
-	cacher := cache.NewCache(trans, lock, targetCfg)
-	return exec.NewExecutor(cacher, noCache), nil
+	cache := cache.NewCache(trans, lock, targetCfg)
+	return exec.NewExecutor(cache, noCache), nil
 }
 
 func createAwsTransport(workCfg usercfg.WorkspaceConfig) (aws.AwsTransport, error) {
@@ -223,6 +223,6 @@ func createAwsLock(workCfg usercfg.WorkspaceConfig) (aws.AwsLock, error) {
 	if err != nil {
 		return aws.AwsLock{}, err
 	}
-	locker, err := aws.NewAwsLock(dynamoClient, workCfg.Name, workCfg.RemoteCache.Table)
-	return locker, err
+	lock, err := aws.NewAwsLock(dynamoClient, workCfg.Name, workCfg.RemoteCache.Table)
+	return lock, err
 }

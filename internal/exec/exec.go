@@ -22,14 +22,14 @@ type Cacher interface {
 }
 
 type Executor struct {
-	cacher  Cacher
+	cache   Cacher
 	noCache bool
 	metrics *runtimeMetrics
 }
 
 func NewExecutor(cache Cacher, noCache bool) *Executor {
 	return &Executor{
-		cacher:  cache,
+		cache:   cache,
 		noCache: noCache,
 		metrics: newRuntimeMetrics(),
 	}
@@ -55,14 +55,14 @@ func (e *Executor) hasFailedDependency(deps map[string]struct{}) bool {
 }
 
 func (e *Executor) executeTaskHelper(node *graph.Node, deps map[string]struct{}) error {
-	isClean, err := e.cacher.IsClean(node, deps)
+	isClean, err := e.cache.IsClean(node, deps)
 	if err != nil {
 		return err
 	}
 
 	var res cache.TaskResult
 	if isClean {
-		res, err = e.cacher.GetTaskResult(node)
+		res, err = e.cache.GetTaskResult(node)
 	} else {
 		res = e.executeTaskCommand(node.Pipeline.Command, node.Dir)
 	}
@@ -83,7 +83,7 @@ func (e *Executor) processTaskResult(id string, isClean bool, res cache.TaskResu
 	if isClean {
 		return nil
 	}
-	return e.cacher.WriteTaskResult(id, res)
+	return e.cache.WriteTaskResult(id, res)
 }
 
 func (e *Executor) executeTaskCommand(command, dir string) cache.TaskResult {
@@ -105,7 +105,7 @@ func (e *Executor) executeTaskCommand(command, dir string) cache.TaskResult {
 }
 
 func (e *Executor) CleanUp(t time.Time) {
-	if err := e.cacher.CleanUp(t); err != nil {
+	if err := e.cache.CleanUp(t); err != nil {
 		e.metrics.errors.append(err)
 	}
 

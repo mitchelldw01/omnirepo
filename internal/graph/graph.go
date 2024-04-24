@@ -21,7 +21,7 @@ type DependencyGraph struct {
 	Nodes map[string]*Node
 	// Map of node IDs to the node IDs of dependencies
 	Dependencies  map[string]map[string]struct{}
-	executor      Executor
+	exec          Executor
 	targetConfigs map[string]usercfg.TargetConfig
 }
 
@@ -29,7 +29,7 @@ func NewDependencyGraph(ex Executor, targetCfgs map[string]usercfg.TargetConfig)
 	return &DependencyGraph{
 		Nodes:         map[string]*Node{},
 		Dependencies:  map[string]map[string]struct{}{},
-		executor:      ex,
+		exec:          ex,
 		targetConfigs: targetCfgs,
 	}
 }
@@ -218,7 +218,7 @@ func (dg *DependencyGraph) ExecuteTasks() {
 	}
 
 	wg.Wait()
-	dg.executor.CleanUp(t)
+	dg.exec.CleanUp(t)
 }
 
 func (dg *DependencyGraph) invertDependencies() map[string]map[string]struct{} {
@@ -247,7 +247,7 @@ func (dg *DependencyGraph) processNode(node *Node, wg *sync.WaitGroup, ch chan s
 	go func(node *Node) {
 		defer wg.Done()
 		deps := dg.Dependencies[node.Id]
-		dg.executor.ExecuteTask(node, deps)
+		dg.exec.ExecuteTask(node, deps)
 		ch <- node.Id
 	}(node)
 
