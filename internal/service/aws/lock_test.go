@@ -76,8 +76,45 @@ func TestLock(t *testing.T) {
 }
 
 func TestUnlock(t *testing.T) {
-	// test that it removes the lock if it exists
-	// that that it errors when the lock isn't acquired
+	project, table := "omnirepo", "omnirepo"
+	tester, err := newDynamoTester(project, table)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	locker, err := omniAws.NewAwsLock(tester.client, project, table)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("should free the lock when its currently locked", func(t *testing.T) {
+		if err := tester.lockTestLock(); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := locker.Unlock(); err != nil {
+			t.Fatal(err)
+		}
+
+		isAcquired, err := tester.readTestLock()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if isAcquired != false {
+			t.Fatalf("expected %v, got %v", false, isAcquired)
+		}
+	})
+
+	t.Run("should return an error when the lock is already unlocked", func(t *testing.T) {
+		if err := tester.unlockTestLock(); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := locker.Unlock(); err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
 }
 
 type dynamoEndpointResolver struct{}
@@ -217,6 +254,11 @@ func (lt *lockTester) unlockTestLock() error {
 
 	input := lt.getUnlockTestLockInput()
 	if _, err := lt.client.UpdateItem(ctx, &input); err != nil {
+		var apiErr *types.ConditionalCheckFailedException
+		if ok := errors.As(err, &apiErr); ok {
+			return nil
+		}
+
 		return fmt.Errorf("failed to release test lock: %v", err)
 	}
 
