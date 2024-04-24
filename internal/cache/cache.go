@@ -30,15 +30,15 @@ func NewTaskResult(isFailed bool, out string) TaskResult {
 }
 
 type Cache struct {
-	transporter   Transporter
-	locker        Locker
+	transport     Transporter
+	lock          Locker
 	targetConfigs map[string]usercfg.TargetConfig
 }
 
-func NewCache(t Transporter, l Locker, targetCfgs map[string]usercfg.TargetConfig) *Cache {
+func NewCache(transport Transporter, lock Locker, targetCfgs map[string]usercfg.TargetConfig) *Cache {
 	return &Cache{
-		transporter:   t,
-		locker:        l,
+		transport:     transport,
+		lock:          lock,
 		targetConfigs: targetCfgs,
 	}
 }
