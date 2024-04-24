@@ -57,7 +57,6 @@ func runTreeCommand(tasks []string, opts Options) error {
 
 	fmt.Println(string(prettyJson))
 	return nil
-
 }
 
 func runRunCommand(tasks []string, opts Options) error {
@@ -183,7 +182,7 @@ func createAwsExecutor(
 }
 
 func createAwsTransport(workCfg usercfg.WorkspaceConfig) (aws.AwsTransport, error) {
-	s3Client, err := aws.NewAwsS3Client(workCfg.Name, workCfg.RemoteCache.Region)
+	s3Client, err := aws.NewS3Client(workCfg.Name, workCfg.RemoteCache.Region)
 	if err != nil {
 		return aws.AwsTransport{}, err
 	}
@@ -192,7 +191,7 @@ func createAwsTransport(workCfg usercfg.WorkspaceConfig) (aws.AwsTransport, erro
 }
 
 func createAwsLock(workCfg usercfg.WorkspaceConfig) (aws.AwsLock, error) {
-	dynamoClient, err := aws.NewAwsDynamoClient(workCfg.Name, workCfg.RemoteCache.Region)
+	dynamoClient, err := aws.NewDynamoClient(workCfg.Name, workCfg.RemoteCache.Region)
 	if err != nil {
 		return aws.AwsLock{}, err
 	}

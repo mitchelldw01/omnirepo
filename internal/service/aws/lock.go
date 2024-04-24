@@ -7,9 +7,26 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
+
+func NewDynamoClient(project, region string) (*dynamodb.Client, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load AWS config: %v", err)
+	}
+
+	if region != "" {
+		cfg.Region = region
+	}
+
+	return dynamodb.NewFromConfig(cfg), nil
+}
 
 type AwsLock struct {
 	client  *dynamodb.Client
@@ -36,7 +53,7 @@ func (l AwsLock) Lock() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	input := l.createLockInput()
+	input := l.getLockInput()
 	if _, err := l.client.UpdateItem(ctx, &input); err != nil {
 		var apiErr *types.ConditionalCheckFailedException
 		if ok := errors.As(err, &apiErr); ok {
@@ -49,7 +66,7 @@ func (l AwsLock) Lock() error {
 	return nil
 }
 
-func (l AwsLock) createLockInput() dynamodb.UpdateItemInput {
+func (l AwsLock) getLockInput() dynamodb.UpdateItemInput {
 	return dynamodb.UpdateItemInput{
 		TableName: aws.String(l.table),
 		Key: map[string]types.AttributeValue{
@@ -69,7 +86,7 @@ func (l AwsLock) Unlock() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	input := l.createUnlockInput()
+	input := l.getUnlockInput()
 	if _, err := l.client.UpdateItem(ctx, &input); err != nil {
 		return fmt.Errorf("failed to release cache lock: %v", err)
 	}
@@ -77,7 +94,7 @@ func (l AwsLock) Unlock() error {
 	return nil
 }
 
-func (l AwsLock) createUnlockInput() dynamodb.UpdateItemInput {
+func (l AwsLock) getUnlockInput() dynamodb.UpdateItemInput {
 	return dynamodb.UpdateItemInput{
 		TableName: aws.String(l.table),
 		Key: map[string]types.AttributeValue{
@@ -85,7 +102,8 @@ func (l AwsLock) createUnlockInput() dynamodb.UpdateItemInput {
 		},
 		UpdateExpression: aws.String("SET LockAcquired = :newval"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":newval": &types.AttributeValueMemberBOOL{Value: false},
+			":newval":     &types.AttributeValueMemberBOOL{Value: false},
+			":currentval": &types.AttributeValueMemberBOOL{Value: true},
 		},
 		ConditionExpression: aws.String("LockAcquired = :currentval"),
 		ReturnValues:        types.ReturnValueUpdatedNew,
