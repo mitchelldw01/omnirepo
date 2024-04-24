@@ -209,19 +209,19 @@ func createAwsExecutor(
 	return exec.NewExecutor(cache, noCache), nil
 }
 
-func createAwsTransport(workCfg usercfg.WorkspaceConfig) (aws.AwsTransport, error) {
+func createAwsTransport(workCfg usercfg.WorkspaceConfig) (*aws.AwsTransport, error) {
 	s3Client, err := aws.NewS3Client(workCfg.Name, workCfg.RemoteCache.Region)
 	if err != nil {
-		return aws.AwsTransport{}, err
+		return nil, err
 	}
 	trans, err := aws.NewAwsTransport(s3Client, workCfg.Name, workCfg.RemoteCache.Bucket)
 	return trans, err
 }
 
-func createAwsLock(workCfg usercfg.WorkspaceConfig) (aws.AwsLock, error) {
+func createAwsLock(workCfg usercfg.WorkspaceConfig) (*aws.AwsLock, error) {
 	dynamoClient, err := aws.NewDynamoClient(workCfg.Name, workCfg.RemoteCache.Region)
 	if err != nil {
-		return aws.AwsLock{}, err
+		return nil, err
 	}
 	lock, err := aws.NewAwsLock(dynamoClient, workCfg.Name, workCfg.RemoteCache.Table)
 	return lock, err

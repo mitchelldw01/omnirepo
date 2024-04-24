@@ -34,22 +34,22 @@ type AwsLock struct {
 	table   string
 }
 
-func NewAwsLock(client *dynamodb.Client, project, table string) (AwsLock, error) {
+func NewAwsLock(client *dynamodb.Client, project, table string) (*AwsLock, error) {
 	if project == "" {
-		return AwsLock{}, errors.New("remote caching requires a project name to be defined")
+		return nil, errors.New("remote caching requires a project name to be defined")
 	}
 	if table == "" {
-		return AwsLock{}, errors.New("remote caching requires a table name to be defined")
+		return nil, errors.New("remote caching requires a table name to be defined")
 	}
 
-	return AwsLock{
+	return &AwsLock{
 		client:  client,
 		project: project,
 		table:   table,
 	}, nil
 }
 
-func (l AwsLock) Lock() error {
+func (l *AwsLock) Lock() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
@@ -66,7 +66,7 @@ func (l AwsLock) Lock() error {
 	return nil
 }
 
-func (l AwsLock) getLockInput() dynamodb.UpdateItemInput {
+func (l *AwsLock) getLockInput() dynamodb.UpdateItemInput {
 	return dynamodb.UpdateItemInput{
 		TableName: aws.String(l.table),
 		Key: map[string]types.AttributeValue{
@@ -82,7 +82,7 @@ func (l AwsLock) getLockInput() dynamodb.UpdateItemInput {
 	}
 }
 
-func (l AwsLock) Unlock() error {
+func (l *AwsLock) Unlock() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
@@ -94,7 +94,7 @@ func (l AwsLock) Unlock() error {
 	return nil
 }
 
-func (l AwsLock) getUnlockInput() dynamodb.UpdateItemInput {
+func (l *AwsLock) getUnlockInput() dynamodb.UpdateItemInput {
 	return dynamodb.UpdateItemInput{
 		TableName: aws.String(l.table),
 		Key: map[string]types.AttributeValue{
