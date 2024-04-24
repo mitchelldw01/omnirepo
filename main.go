@@ -58,11 +58,11 @@ func parseRawArguments(args []string) ([]string, run.Options, error) {
 func printHelpMenu() {
 	code := log.Bold + log.Underline
 	text := "High performance task-runner for any codebase\n\n"
-	text += fmt.Sprintf("%sUsage:%s\n    omni [OPTIONS] [COMMAND] [TASKS...]\n\n", code, log.Reset)
+	text += fmt.Sprintf("%sUsage:%s\n    omni [OPTIONS] [COMMAND] [TASK...]\n\n", code, log.Reset)
 
 	text += fmt.Sprintf("%sCommands:%s\n", code, log.Reset)
 	text += "    unlock                             Forcefully unlock the cache\n"
-	text += "    graph                              Show the dependency graph as JSON\n"
+	text += "    tree                               Show the dependency tree as JSON\n"
 	text += "    run                                Run tasks (default)\n\n"
 
 	text += fmt.Sprintf("%sOptions:%s\n", code, log.Reset)
@@ -71,6 +71,7 @@ func printHelpMenu() {
 	text += "    --no-color                         Disable color output\n"
 	text += "    -r, --remote                       Use remote cache\n"
 	text += "    -t, --target <PATH>                Load tasks from specific target directory\n"
+	text += "    -v, --version                      Show version\n"
 
 	fmt.Print(text)
 }
