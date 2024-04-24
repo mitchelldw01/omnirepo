@@ -40,7 +40,7 @@ func (l AwsLock) Lock() error {
 	if _, err := l.client.UpdateItem(ctx, &input); err != nil {
 		var apiErr *types.ConditionalCheckFailedException
 		if ok := errors.As(err, &apiErr); ok {
-			return fmt.Errorf("lock is already acquired... run 'omni force-unlock' to cancel")
+			return fmt.Errorf("lock is already acquired... run 'omni unlock' to cancel")
 		}
 
 		return fmt.Errorf("failed to acquire cache lock: %v", err)
