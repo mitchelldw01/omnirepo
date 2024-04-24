@@ -80,6 +80,7 @@ targets:
     - bar
 remoteCache:
     bucket: my-bucket
+    table: my-table
     region: us-east-1
 ```
 
