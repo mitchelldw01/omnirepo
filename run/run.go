@@ -36,7 +36,35 @@ func RunCommand(cmd string, tasks []string, opts Options) error {
 }
 
 func runUnlockCommand() error {
+	workCfg, err := usercfg.NewWorkspaceConfig()
+	if err != nil {
+		return err
+	}
+
+	lock, err := createCacheLock(workCfg)
+	if err != nil {
+		return err
+	}
+
+	if err := lock.Unlock(); err != nil {
+		return err
+	}
+
+	fmt.Println("Lock removed successfully.")
 	return nil
+}
+
+func createCacheLock(workCfg usercfg.WorkspaceConfig) (cache.Locker, error) {
+	if !workCfg.RemoteCache.Enabled {
+		return sys.NewSystemLock()
+	}
+
+	client, err := aws.NewDynamoClient(workCfg.Name, workCfg.RemoteCache.Region)
+	if err != nil {
+		return nil, err
+	}
+
+	return aws.NewAwsLock(client, workCfg.Name, workCfg.RemoteCache.Table)
 }
 
 func runTreeCommand(tasks []string, opts Options) error {
@@ -153,12 +181,12 @@ func createDependencyGraph(
 
 func createSystemExecutor(targetCfgs map[string]usercfg.TargetConfig, noCache bool) (graph.Executor, error) {
 	trans := sys.NewSystemTransport()
-	locker, err := sys.NewSystemLock()
+	lock, err := sys.NewSystemLock()
 	if err != nil {
 		return nil, err
 	}
 
-	cacher := cache.NewCache(trans, locker, targetCfgs)
+	cacher := cache.NewCache(trans, lock, targetCfgs)
 	return exec.NewExecutor(cacher, noCache), nil
 }
 
@@ -172,12 +200,12 @@ func createAwsExecutor(
 		return nil, err
 	}
 
-	locker, err := createAwsLock(workCfg)
+	lock, err := createAwsLock(workCfg)
 	if err != nil {
 		return nil, err
 	}
 
-	cacher := cache.NewCache(trans, locker, targetCfg)
+	cacher := cache.NewCache(trans, lock, targetCfg)
 	return exec.NewExecutor(cacher, noCache), nil
 }
 
