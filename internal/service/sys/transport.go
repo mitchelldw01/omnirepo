@@ -1,9 +1,10 @@
 package sys
 
 import (
-	"bytes"
+	"fmt"
 	"io"
-	"strings"
+	"os"
+	"path/filepath"
 )
 
 type SystemTransport struct{}
@@ -13,17 +14,18 @@ func NewSystemTransport() SystemTransport {
 }
 
 func (st SystemTransport) Reader(path string) (io.ReadCloser, error) {
-	return io.NopCloser(strings.NewReader("stubbed response")), nil
+	r, err := os.Open(filepath.Join(".omni/cache", path))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read cache asset\n%v", err)
+	}
+	return r, nil
 }
 
 func (st SystemTransport) Writer(path string) (io.WriteCloser, error) {
-	return &stubWriteCloser{Buffer: new(bytes.Buffer)}, nil
-}
+	dst := filepath.Join(".omni/cache", path)
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return nil, fmt.Errorf("failed to write cache asset\n%v", err)
+	}
 
-type stubWriteCloser struct {
-	*bytes.Buffer
-}
-
-func (swc *stubWriteCloser) Close() error {
-	return nil
+	return os.Create(dst)
 }
