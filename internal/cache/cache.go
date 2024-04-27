@@ -107,10 +107,10 @@ func (c *Cache) Init() error {
 
 func (c *Cache) IsClean(node *graph.Node, deps map[string]struct{}) (bool, error) {
 	c.outputs.mutex.Lock()
-	if c.outputs.set[node.Dir] == nil {
-		c.outputs.set[node.Dir] = []string{}
+	if c.outputs.data[node.Dir] == nil {
+		c.outputs.data[node.Dir] = []string{}
 	}
-	c.outputs.set[node.Dir] = append(c.outputs.set[node.Dir], node.Pipeline.Outputs...)
+	c.outputs.data[node.Dir] = append(c.outputs.data[node.Dir], node.Pipeline.Outputs...)
 	c.outputs.mutex.Unlock()
 
 	isClean, err := c.isCleanHelper(node, deps)
