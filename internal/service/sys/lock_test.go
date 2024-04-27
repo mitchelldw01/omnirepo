@@ -110,11 +110,11 @@ func createTestLock(path string) error {
 		return nil
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("failed to create test lock: %v", err)
 	}
 
-	if err := os.WriteFile(path, []byte(""), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(""), 0o644); err != nil {
 		return fmt.Errorf("failed to create test lock: %v", err)
 	}
 

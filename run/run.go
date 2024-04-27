@@ -219,14 +219,23 @@ func createAwsExecutor(
 	if err != nil {
 		return nil, err
 	}
+
 	cache := cache.NewCache(trans, targetCfgs)
+	if err := cache.Init(); err != nil {
+		return nil, err
+	}
+
 	return exec.NewExecutor(cache, noCache), nil
 }
 
 func createSystemExecutor(targetCfgs map[string]usercfg.TargetConfig, noCache bool) (graph.Executor, error) {
 	trans := sys.NewSystemTransport()
-	cacher := cache.NewCache(trans, targetCfgs)
-	return exec.NewExecutor(cacher, noCache), nil
+	cache := cache.NewCache(trans, targetCfgs)
+	if err := cache.Init(); err != nil {
+		return nil, err
+	}
+
+	return exec.NewExecutor(cache, noCache), nil
 }
 
 func createAwsTransport(workCfg usercfg.WorkspaceConfig) (*aws.AwsTransport, error) {
