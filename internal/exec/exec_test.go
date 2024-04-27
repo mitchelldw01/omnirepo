@@ -18,7 +18,7 @@ func (c *cacher) IsClean(node *graph.Node, deps map[string]struct{}) (bool, erro
 	return false, nil
 }
 
-func (c *cacher) GetTaskResult(node *graph.Node) (cache.TaskResult, error) {
+func (c *cacher) GetTaskResult(dir, name string) (cache.TaskResult, error) {
 	return cache.TaskResult{}, nil
 }
 

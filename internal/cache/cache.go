@@ -269,8 +269,8 @@ func (c *Cache) cacheContainsHashes(cache *concurrentMap[struct{}], paths []stri
 	return cache.contains(hashes...), nil
 }
 
-func (c *Cache) GetTaskResult(node *graph.Node) (TaskResult, error) {
-	path := filepath.Join(c.prevCacheDir, node.Dir, "results", node.Name+".json")
+func (c *Cache) GetTaskResult(dir, name string) (TaskResult, error) {
+	path := filepath.Join(c.prevCacheDir, dir, "results", name+".json")
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return TaskResult{}, fmt.Errorf("failed to read task result %q: %v", path, err)
