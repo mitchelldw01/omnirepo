@@ -2,7 +2,6 @@ package exec_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/mitchelldw01/omnirepo/internal/cache"
 	"github.com/mitchelldw01/omnirepo/internal/exec"
@@ -27,7 +26,7 @@ func (c *cacher) WriteTaskResult(dir, name string, res cache.TaskResult) error {
 	return nil
 }
 
-func (c *cacher) CleanUp(t time.Time) error {
+func (c *cacher) CleanUp() error {
 	return nil
 }
 

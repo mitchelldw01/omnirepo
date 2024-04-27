@@ -18,7 +18,7 @@ type Cacher interface {
 	IsClean(node *graph.Node, deps map[string]struct{}) (bool, error)
 	GetTaskResult(dir, name string) (cache.TaskResult, error)
 	WriteTaskResult(dir, name string, res cache.TaskResult) error
-	CleanUp(t time.Time) error
+	CleanUp() error
 }
 
 type Executor struct {
@@ -106,7 +106,7 @@ func (e *Executor) executeTaskCommand(command, dir string) cache.TaskResult {
 }
 
 func (e *Executor) CleanUp(t time.Time) {
-	if err := e.cache.CleanUp(t); err != nil {
+	if err := e.cache.CleanUp(); err != nil {
 		e.metrics.errors.append(err)
 	}
 

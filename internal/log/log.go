@@ -35,9 +35,13 @@ func Fatal(v ...any) {
 func Error(v ...any) {
 	prefix := "error: "
 	if !NoColor {
-		prefix = fmt.Sprintf("%s%serror:%s ", Red, Bold, Reset)
+		prefix = fmt.Sprintf("%s%serror:%s", Red, Bold, Reset)
 	}
-	fmt.Fprintf(os.Stderr, "%s %v", prefix, v)
+	fmt.Fprint(os.Stderr, prefix)
+	for _, item := range v {
+		fmt.Fprintf(os.Stderr, " %v", item)
+	}
+	fmt.Fprintln(os.Stderr)
 }
 
 func TaskOutput(id, out string) {
@@ -90,7 +94,7 @@ func metricsColor(hits, total, failed int, duration time.Duration) {
 	fmt.Printf("%sTasks:%s       %s, %d total\n", Bold, Reset, taskTxt, total)
 
 	hitsTxt := fmt.Sprintf("%d hits, %d total", hits, total)
-	if hits != total {
+	if hits == total {
 		hitsTxt += fmt.Sprintf(" %s%s» 100%%%s", Green, Bold, Reset)
 	}
 	fmt.Printf("%sCache Hits:%s  %s\n", Bold, Reset, hitsTxt)
