@@ -31,10 +31,7 @@ func TestReader(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	trans, err := omniAws.NewAwsTransport(helper.client, project, bucket)
-	if err != nil {
-		t.Fatal(err)
-	}
+	trans := omniAws.NewAwsTransport(helper.client, project, bucket)
 	r, err := trans.Reader(key)
 	if err != nil {
 		t.Fatal(err)
@@ -61,10 +58,7 @@ func TestWriter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	trans, err := omniAws.NewAwsTransport(helper.client, project, bucket)
-	if err != nil {
-		t.Fatal(err)
-	}
+	trans := omniAws.NewAwsTransport(helper.client, project, bucket)
 	w, err := trans.Writer(key)
 	if err != nil {
 		t.Fatal(err)

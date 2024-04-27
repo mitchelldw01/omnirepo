@@ -2,7 +2,6 @@ package aws
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -36,19 +35,12 @@ type AwsTransport struct {
 	bucket  string
 }
 
-func NewAwsTransport(client *s3.Client, project, bucket string) (*AwsTransport, error) {
-	if project == "" {
-		return nil, errors.New("project name is not defined in workspace config")
-	}
-	if bucket == "" {
-		return nil, errors.New("bucket name is not defined in workspace config")
-	}
-
+func NewAwsTransport(client *s3.Client, project, bucket string) *AwsTransport {
 	return &AwsTransport{
 		client:  client,
 		project: project,
 		bucket:  bucket,
-	}, nil
+	}
 }
 
 func (t *AwsTransport) Reader(key string) (io.ReadCloser, error) {

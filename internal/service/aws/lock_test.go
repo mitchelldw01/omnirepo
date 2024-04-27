@@ -21,10 +21,7 @@ func TestLock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lock, err := omniAws.NewAwsLock(helper.client, project, table)
-	if err != nil {
-		t.Fatal(err)
-	}
+	lock := omniAws.NewAwsLock(helper.client, project, table)
 
 	t.Run("should create the lock when it doesn't exist", func(t *testing.T) {
 		if err := helper.deleteTestLock(); err != nil {
@@ -82,10 +79,7 @@ func TestUnlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lock, err := omniAws.NewAwsLock(helper.client, project, table)
-	if err != nil {
-		t.Fatal(err)
-	}
+	lock := omniAws.NewAwsLock(helper.client, project, table)
 
 	t.Run("should free the lock when it's currently locked", func(t *testing.T) {
 		if err := helper.lockTestLock(); err != nil {
