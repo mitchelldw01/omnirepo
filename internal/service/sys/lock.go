@@ -18,7 +18,7 @@ func NewSystemLock(workspace string) (SystemLock, error) {
 
 	path := filepath.Join(home, ".omni/cache", workspace, "lock")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return SystemLock{}, err
+		return SystemLock{}, fmt.Errorf("failed to create cache directory %q: %v", path, err)
 	}
 
 	return SystemLock{path: path}, nil
@@ -38,5 +38,13 @@ func (l SystemLock) Lock() error {
 }
 
 func (l SystemLock) Unlock() error {
-	return os.Remove(l.path)
+	err := os.Remove(l.path)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("cannot free lock because it is not currently acquired")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to unlock cache: %v", err)
+	}
+
+	return nil
 }

@@ -37,13 +37,13 @@ func (ncm *nestedConcurrentMap[T]) getOrPut(key string) (*concurrentMap[T], bool
 	return val, ok
 }
 
-// func (ncm *nestedConcurrentMap[T]) toUnsafeMap() map[string]map[string]T {
-// 	set := map[string]map[string]T{}
-// 	for key, val := range ncm.set {
-// 		set[key] = val.toUnsafeMap()
-// 	}
-// 	return set
-// }
+func (ncm *nestedConcurrentMap[T]) toUnsafeMap() map[string]map[string]T {
+	set := map[string]map[string]T{}
+	for key, val := range ncm.data {
+		set[key] = val.toUnsafeMap()
+	}
+	return set
+}
 
 type concurrentMap[T any] struct {
 	data  map[string]T
@@ -70,9 +70,9 @@ func (cm *concurrentMap[T]) put(key string, val T) {
 	cm.mutex.Unlock()
 }
 
-// func (cm *concurrentMap[T]) toUnsafeMap() map[string]T {
-// 	return cm.set
-// }
+func (cm *concurrentMap[T]) toUnsafeMap() map[string]T {
+	return cm.data
+}
 
 func (cm *concurrentMap[T]) contains(keys ...string) bool {
 	cm.mutex.RLock()

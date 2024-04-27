@@ -28,7 +28,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/mitchelldw01/omnirepo/internal/graph"
 	"github.com/mitchelldw01/omnirepo/usercfg"
@@ -152,11 +151,11 @@ func (c *Cache) hasInvalidDependency(deps map[string]struct{}) bool {
 		index := strings.LastIndex(id, ":")
 		dir, name := id[:index], id[index+1:]
 
-		set, ok := c.invalidCaches.get(dir)
+		connMap, ok := c.invalidCaches.get(dir)
 		if !ok {
 			continue
 		}
-		_, ok = set.get(name)
+		_, ok = connMap.get(name)
 		if ok {
 			return true
 		}
@@ -302,8 +301,163 @@ func (c *Cache) WriteTaskResult(dir, name string, res TaskResult) error {
 	return nil
 }
 
-func (c *Cache) CleanUp(t time.Time) error {
-	// write the final caches (including ouputs)
-	// restore the outputs
+func (c *Cache) CleanUp() error {
+	if err := c.updateWorkspaceCache(); err != nil {
+		return err
+	}
+
+	for dir, connMap := range c.invalidCaches.toUnsafeMap() {
+		if err := c.updateTargetCache(dir, connMap); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+func (c *Cache) updateWorkspaceCache() error {
+	if !c.isWorkInvalid {
+		return nil
+	}
+
+	paths, err := c.getWorkspacePaths()
+	if err != nil {
+		return err
+	}
+
+	hashes, err := c.computeHashMap(paths)
+	if err != nil {
+		return err
+	}
+
+	return c.writeWorkspaceCache(hashes)
+}
+
+func (c *Cache) getWorkspacePaths() ([]string, error) {
+	patternSet := map[string]struct{}{}
+	for _, cfg := range c.targetConfigs {
+		for _, pattern := range cfg.WorkspaceAssets {
+			patternSet[pattern] = struct{}{}
+		}
+	}
+
+	patterns := []string{}
+	for pattern := range patternSet {
+		patterns = append(patterns, pattern)
+	}
+
+	return getCacheableWorkspacePaths(patterns, c.targets)
+}
+
+func (c *Cache) writeWorkspaceCache(hashMap map[string]struct{}) error {
+	b, err := json.Marshal(hashMap)
+	if err != nil {
+		return err
+	}
+
+	w, err := c.transport.Writer("workspace.json")
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
+	_, err = w.Write(b)
+	return err
+}
+
+func (c *Cache) updateTargetCache(dir string, hashMap map[string]struct{}) error {
+	includes := c.concatIncludesPatterns(c.targetConfigs[dir], hashMap)
+	excludes := c.concatExcludesPatterns(c.targetConfigs[dir], hashMap)
+	paths, err := getCacheableTargetPaths(dir, includes, excludes)
+	if err != nil {
+		return err
+	}
+
+	hashes, err := c.computeHashMap(paths)
+	if err != nil {
+		return err
+	}
+
+	return c.writeTargetCache(dir, hashes)
+}
+
+func (c *Cache) concatIncludesPatterns(cfg usercfg.TargetConfig, hashMap map[string]struct{}) []string {
+	patternSet := map[string]struct{}{}
+
+	for task := range hashMap {
+		for _, pattern := range cfg.Pipeline[task].Includes {
+			patternSet[pattern] = struct{}{}
+		}
+	}
+
+	patterns := []string{}
+	for pattern := range patternSet {
+		patterns = append(patterns, pattern)
+	}
+
+	return patterns
+}
+
+func (c *Cache) concatExcludesPatterns(cfg usercfg.TargetConfig, hashMap map[string]struct{}) []string {
+	patternSet := map[string]struct{}{}
+
+	for task := range hashMap {
+		for _, pattern := range cfg.Pipeline[task].Excludes {
+			patternSet[pattern] = struct{}{}
+		}
+	}
+
+	patterns := []string{}
+	for pattern := range patternSet {
+		patterns = append(patterns, pattern)
+	}
+
+	return patterns
+}
+
+func (c *Cache) writeTargetCache(dir string, hashes map[string]struct{}) error {
+	tmp := filepath.Join(c.nextCacheDir, dir)
+	if err := os.MkdirAll(tmp, 0755); err != nil {
+		return fmt.Errorf("failed to create cache directory: %v", err)
+	}
+
+	if err := c.writeInputsCache(tmp, hashes); err != nil {
+		return err
+	}
+
+	w, err := c.transport.Writer(fmt.Sprintf("%s-meta.tar.zst", dir))
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
+	return createTarZst(tmp, w)
+}
+
+func (c *Cache) writeInputsCache(dir string, hashes map[string]struct{}) error {
+	inputsJson, err := json.Marshal(hashes)
+	if err != nil {
+		return err
+	}
+
+	path := filepath.Join(dir, "inputs.json")
+	if err := os.WriteFile(path, inputsJson, 0644); err != nil {
+		return fmt.Errorf("failed to write cache file: %v", err)
+	}
+
+	return nil
+}
+
+func (c *Cache) computeHashMap(paths []string) (map[string]struct{}, error) {
+	hashes, err := c.hasher.hash(paths...)
+	if err != nil {
+		return nil, err
+	}
+
+	hashMap := make(map[string]struct{}, len(hashes))
+	for _, hash := range hashes {
+		hashMap[hash] = struct{}{}
+	}
+
+	return hashMap, nil
 }
