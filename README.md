@@ -72,6 +72,8 @@ Configuration options for the workspace are defined in an `omni-workspace.yaml` 
     - `table`: The name of the DynamoDB table to use for cache locking. Omnirepo will not create this table for you.
     - `region`: The AWS region to use. You can omit this property to use the default region.
 
+> The DynamoDB table for remote caching should be configured with a string partition key named `WorkspaceName`.
+
 ```yaml
 # omni-workspace.yaml
 name: sample-project
@@ -83,6 +85,8 @@ remoteCache:
     table: my-table
     region: us-east-1
 ```
+
+
 
 ### Target Configuration
 
