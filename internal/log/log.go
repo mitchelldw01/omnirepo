@@ -23,7 +23,7 @@ const (
 var (
 	NoColor = false
 	codes   = [4]string{Yellow, Blue, Magenta, Cyan}
-	idx     = 0
+	index   = 0
 	mutex   = sync.Mutex{}
 )
 
@@ -51,8 +51,8 @@ func TaskOutput(id, out string) {
 			return
 		}
 
-		colorCode := codes[idx]
-		idx = (idx + 1) % len(codes)
+		colorCode := codes[index]
+		index = (index + 1) % len(codes)
 		fmt.Printf("%s%s:%s %s\n", colorCode, id, Reset, line)
 	}
 }
