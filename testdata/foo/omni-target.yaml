@@ -1,9 +1,0 @@
-dependencies: ["bar"]
-
-pipeline:
-  test:
-    command: "touch output.txt"
-    dependsOn: ["^test"]
-    includes: ["**/*"]
-    excludes: ["main.txt"]
-    outputs: ["output.txt"]
