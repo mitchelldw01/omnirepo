@@ -22,7 +22,7 @@ func (c *cacher) GetTaskResult(node *graph.Node) (cache.TaskResult, error) {
 	return cache.TaskResult{}, nil
 }
 
-func (c *cacher) WriteTaskResult(id string, res cache.TaskResult) error {
+func (c *cacher) WriteTaskResult(dir, name string, res cache.TaskResult) error {
 	c.isFailed = res.IsFailed
 	return nil
 }

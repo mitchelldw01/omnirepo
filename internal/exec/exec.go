@@ -17,7 +17,7 @@ import (
 type Cacher interface {
 	IsClean(node *graph.Node, deps map[string]struct{}) (bool, error)
 	GetTaskResult(node *graph.Node) (cache.TaskResult, error)
-	WriteTaskResult(id string, res cache.TaskResult) error
+	WriteTaskResult(dir, name string, res cache.TaskResult) error
 	CleanUp(t time.Time) error
 }
 
@@ -70,20 +70,21 @@ func (e *Executor) executeTaskHelper(node *graph.Node, deps map[string]struct{})
 		return err
 	}
 
-	return e.processTaskResult(node.Id, isClean, res)
+	return e.processTaskResult(node, isClean, res)
 }
 
-func (e *Executor) processTaskResult(id string, isClean bool, res cache.TaskResult) error {
+func (e *Executor) processTaskResult(node *graph.Node, isClean bool, res cache.TaskResult) error {
 	e.metrics.total.increment()
 	if res.IsFailed {
-		e.metrics.failed.put(id)
+		e.metrics.failed.put(node.Id)
 	}
 
-	log.TaskOutput(id, res.Output)
+	log.TaskOutput(node.Id, res.Output)
 	if isClean {
 		return nil
 	}
-	return e.cache.WriteTaskResult(id, res)
+
+	return e.cache.WriteTaskResult(node.Dir, node.Name, res)
 }
 
 func (e *Executor) executeTaskCommand(command, dir string) cache.TaskResult {
