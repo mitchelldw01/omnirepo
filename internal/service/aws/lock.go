@@ -60,7 +60,7 @@ func (l *AwsLock) Lock() error {
 }
 
 func (l *AwsLock) getLockInput() dynamodb.UpdateItemInput {
-	// Sets the value of `LockAcquired` to `true` for the item with the given `ProjectName`.
+	// Sets the value of `LockAcquired` to `true` for the item with the given `WorkspaceName`.
 	// If the item does not exist, it will be created.
 	return dynamodb.UpdateItemInput{
 		TableName: aws.String(l.table),
@@ -90,7 +90,7 @@ func (l *AwsLock) Unlock() error {
 }
 
 func (l *AwsLock) getUnlockInput() dynamodb.UpdateItemInput {
-	// Sets `LockAcquired` to `false` on the item with the given `ProjectName`.
+	// Sets `LockAcquired` to `false` on the item with the given `WorkspaceName`.
 	return dynamodb.UpdateItemInput{
 		TableName: aws.String(l.table),
 		Key: map[string]types.AttributeValue{
