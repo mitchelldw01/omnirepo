@@ -56,11 +56,13 @@ type Cache struct {
 	transport     Transporter
 	targetConfigs map[string]usercfg.TargetConfig
 	// List of keys from targetConfigs
-	targets      []string
-	hasher       sha256Hasher
+	targets []string
+	hasher  sha256Hasher
+	// Map from target directories to the output patterns from every node
+	outputs      *concurrentMap[[]string]
 	workCache    *concurrentMap[struct{}]
 	targetCaches *nestedConcurrentMap[struct{}]
-	// Map from `node.Dir`s to set of `node.Name`s of invalid caches
+	// Map from target directories to set of node names of invalid caches
 	invalidCaches *nestedConcurrentMap[struct{}]
 	// Ensures safe initialization of the workspace cache
 	initWorkLock  sync.Mutex
@@ -80,6 +82,7 @@ func NewCache(transport Transporter, targetCfgs map[string]usercfg.TargetConfig)
 		targetConfigs: targetCfgs,
 		targets:       targets,
 		hasher:        *newSha256Hasher(),
+		outputs:       newConcurrentMap[[]string](),
 		targetCaches:  newNestedConcurrentMap[struct{}](),
 		invalidCaches: newNestedConcurrentMap[struct{}](),
 		initWorkLock:  sync.Mutex{},
@@ -103,11 +106,19 @@ func (c *Cache) Init() error {
 }
 
 func (c *Cache) IsClean(node *graph.Node, deps map[string]struct{}) (bool, error) {
+	c.outputs.mutex.Lock()
+	if c.outputs.set[node.Dir] == nil {
+		c.outputs.set[node.Dir] = []string{}
+	}
+	c.outputs.set[node.Dir] = append(c.outputs.set[node.Dir], node.Pipeline.Outputs...)
+	c.outputs.mutex.Unlock()
+
 	isClean, err := c.isCleanHelper(node, deps)
 	if !isClean {
 		nameSet, _ := c.invalidCaches.getOrPut(node.Dir)
 		nameSet.put(node.Name, struct{}{})
 	}
+
 	return isClean, err
 }
 
@@ -160,7 +171,7 @@ func (c *Cache) isWorkspaceClean(dir string) (bool, error) {
 		return false, err
 	}
 
-	cache, err := c.getWorkspaceCache()
+	connMap, err := c.getWorkspaceCache()
 	if err != nil && !isNotExistError(err) {
 		return false, err
 	}
@@ -171,7 +182,7 @@ func (c *Cache) isWorkspaceClean(dir string) (bool, error) {
 		return true, nil
 	}
 
-	return c.cacheContainsHashes(cache, paths)
+	return c.cacheContainsHashes(connMap, paths)
 }
 
 func (c *Cache) getWorkspaceCache() (*concurrentMap[struct{}], error) {
@@ -182,16 +193,16 @@ func (c *Cache) getWorkspaceCache() (*concurrentMap[struct{}], error) {
 		return c.workCache, nil
 	}
 
-	cache := newConcurrentMap[struct{}]()
-	c.workCache = cache
+	connMap := newConcurrentMap[struct{}]()
+	c.workCache = connMap
 
 	r, err := c.transport.Reader("workspace.json")
 	if err != nil {
-		return cache, err
+		return connMap, err
 	}
 	defer r.Close()
 
-	return cache, cache.loadFromReader(r)
+	return connMap, connMap.loadFromReader(r)
 }
 
 func (c *Cache) isTargetClean(node *graph.Node) (bool, error) {
@@ -200,7 +211,7 @@ func (c *Cache) isTargetClean(node *graph.Node) (bool, error) {
 		return false, err
 	}
 
-	cache, err := c.getTargetCache(node.Dir)
+	connMap, err := c.getTargetCache(node.Dir)
 	if err != nil && !isNotExistError(err) {
 		return false, err
 	}
@@ -211,18 +222,18 @@ func (c *Cache) isTargetClean(node *graph.Node) (bool, error) {
 		return true, nil
 	}
 
-	return c.cacheContainsHashes(cache, paths)
+	return c.cacheContainsHashes(connMap, paths)
 }
 
 func (c *Cache) getTargetCache(dir string) (*concurrentMap[struct{}], error) {
-	cache, ok := c.targetCaches.getOrPut(dir)
+	connMap, ok := c.targetCaches.getOrPut(dir)
 	if ok {
-		return cache, nil
+		return connMap, nil
 	}
 
 	dst, err := c.unpackTargetCache(dir)
 	if err != nil {
-		return cache, err
+		return connMap, err
 	}
 
 	path := filepath.Join(dst, "inputs.json")
@@ -231,7 +242,7 @@ func (c *Cache) getTargetCache(dir string) (*concurrentMap[struct{}], error) {
 		return nil, fmt.Errorf("failed to open file %q: %v", path, err)
 	}
 
-	return cache, cache.loadFromReader(r)
+	return connMap, connMap.loadFromReader(r)
 }
 
 func (c *Cache) unpackTargetCache(dir string) (string, error) {
@@ -255,7 +266,6 @@ func (c *Cache) cacheContainsHashes(cache *concurrentMap[struct{}], paths []stri
 	if err != nil {
 		return false, err
 	}
-
 	return cache.contains(hashes...), nil
 }
 
