@@ -14,14 +14,14 @@ func TestLock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to determine home directory: %v", err)
 	}
-	path := filepath.Join(home, ".omni/cache/lock")
+	path := filepath.Join(home, ".omni/cache", project, "lock")
 
 	t.Run("should create the lock when it doesn't exist", func(t *testing.T) {
 		if err := deleteTestLock(path); err != nil {
 			t.Fatal(err)
 		}
 
-		lock, err := sys.NewSystemLock()
+		lock, err := sys.NewSystemLock(project)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -40,7 +40,7 @@ func TestLock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		lock, err := sys.NewSystemLock()
+		lock, err := sys.NewSystemLock(project)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -56,14 +56,14 @@ func TestUnlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to determine home directory: %v", err)
 	}
-	path := filepath.Join(home, ".omni/cache/lock")
+	path := filepath.Join(home, ".omni/cache", project, "lock")
 
 	t.Run("should remove the lock when it exists", func(t *testing.T) {
 		if err := createTestLock(path); err != nil {
 			t.Fatal(err)
 		}
 
-		lock, err := sys.NewSystemLock()
+		lock, err := sys.NewSystemLock(project)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -82,7 +82,7 @@ func TestUnlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		lock, err := sys.NewSystemLock()
+		lock, err := sys.NewSystemLock(project)
 		if err != nil {
 			t.Fatal(err)
 		}

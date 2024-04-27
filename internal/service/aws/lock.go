@@ -36,10 +36,10 @@ type AwsLock struct {
 
 func NewAwsLock(client *dynamodb.Client, project, table string) (*AwsLock, error) {
 	if project == "" {
-		return nil, errors.New("remote caching requires a project name to be defined")
+		return nil, errors.New("project name is not defined in workspace config")
 	}
 	if table == "" {
-		return nil, errors.New("remote caching requires a table name to be defined")
+		return nil, errors.New("table name is not defined in workspace config")
 	}
 
 	return &AwsLock{

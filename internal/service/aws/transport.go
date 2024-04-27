@@ -38,10 +38,10 @@ type AwsTransport struct {
 
 func NewAwsTransport(client *s3.Client, project, bucket string) (*AwsTransport, error) {
 	if project == "" {
-		return nil, errors.New("remote caching requires a project name to be defined")
+		return nil, errors.New("project name is not defined in workspace config")
 	}
 	if bucket == "" {
-		return nil, errors.New("remote caching requires a bucket name to be defined")
+		return nil, errors.New("bucket name is not defined in workspace config")
 	}
 
 	return &AwsTransport{
