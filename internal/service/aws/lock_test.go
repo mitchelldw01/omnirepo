@@ -171,6 +171,7 @@ func createTestTable(client *dynamodb.Client, table string) error {
 }
 
 func getCreateTableInput(table string) dynamodb.CreateTableInput {
+	// Creates a table with the string attribute `WorkspaceName` as the partition key.
 	return dynamodb.CreateTableInput{
 		TableName: &table,
 		AttributeDefinitions: []types.AttributeDefinition{
@@ -231,6 +232,7 @@ func (lth *lockTestHelper) readTestLock() (bool, error) {
 }
 
 func (lth *lockTestHelper) getReadTestLockInput() dynamodb.GetItemInput {
+	// Gets the value of `LockAcquired` for the item with the given `WorkspaceName`.
 	return dynamodb.GetItemInput{
 		TableName: &lth.table,
 		Key: map[string]types.AttributeValue{
@@ -260,6 +262,8 @@ func (lth *lockTestHelper) unlockTestLock() error {
 }
 
 func (lth *lockTestHelper) getUnlockTestLockInput() dynamodb.UpdateItemInput {
+	// Sets `LockAcquired` to `false` for the item with the given `WorkspaceName`.
+	// It returns the new value of `LockAcquired`.
 	return dynamodb.UpdateItemInput{
 		TableName: aws.String(lth.table),
 		Key: map[string]types.AttributeValue{
@@ -293,6 +297,9 @@ func (lth *lockTestHelper) lockTestLock() error {
 }
 
 func (lth *lockTestHelper) getLockTestLockInput() dynamodb.UpdateItemInput {
+	// Sets `LockAcquired` to `true` for the item with the given `WorkspaceName`.
+	// The update only occurs if the attribute does not exist or is currently `false`.
+	// It returns the updated values.
 	return dynamodb.UpdateItemInput{
 		TableName: aws.String(lth.table),
 		Key: map[string]types.AttributeValue{
