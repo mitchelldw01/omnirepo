@@ -102,11 +102,11 @@ func changeWorkingDirectory() (string, error) {
 
 func createTestFile(dir string) error {
 	path := filepath.Join(dir, ".omni/cache", key)
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("failed to create test directory: %v", err)
 	}
 
-	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 		return fmt.Errorf("failed to create test file: %v", err)
 	}
 

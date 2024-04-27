@@ -1,6 +1,11 @@
 package cache
 
-import "sync"
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"sync"
+)
 
 type nestedConcurrentMap[T any] struct {
 	set   map[string]*concurrentMap[T]
@@ -17,7 +22,14 @@ func newNestedConcurrentMap[T any]() *nestedConcurrentMap[T] {
 func (ncm *nestedConcurrentMap[T]) get(key string) (*concurrentMap[T], bool) {
 	ncm.mutex.Lock()
 	val, ok := ncm.set[key]
-	if val == nil {
+	ncm.mutex.Unlock()
+	return val, ok
+}
+
+func (ncm *nestedConcurrentMap[T]) getOrPut(key string) (*concurrentMap[T], bool) {
+	ncm.mutex.Lock()
+	val, ok := ncm.set[key]
+	if !ok {
 		val = newConcurrentMap[T]()
 		ncm.set[key] = val
 	}
@@ -25,13 +37,13 @@ func (ncm *nestedConcurrentMap[T]) get(key string) (*concurrentMap[T], bool) {
 	return val, ok
 }
 
-func (ncm *nestedConcurrentMap[T]) toUnsafeMap() map[string]map[string]T {
-	set := map[string]map[string]T{}
-	for key, val := range ncm.set {
-		set[key] = val.toUnsafeMap()
-	}
-	return set
-}
+// func (ncm *nestedConcurrentMap[T]) toUnsafeMap() map[string]map[string]T {
+// 	set := map[string]map[string]T{}
+// 	for key, val := range ncm.set {
+// 		set[key] = val.toUnsafeMap()
+// 	}
+// 	return set
+// }
 
 type concurrentMap[T any] struct {
 	set   map[string]T
@@ -58,6 +70,31 @@ func (cm *concurrentMap[T]) put(key string, val T) {
 	cm.mutex.Unlock()
 }
 
-func (cm *concurrentMap[T]) toUnsafeMap() map[string]T {
-	return cm.set
+// func (cm *concurrentMap[T]) toUnsafeMap() map[string]T {
+// 	return cm.set
+// }
+
+func (cm *concurrentMap[T]) contains(keys ...string) bool {
+	cm.mutex.RLock()
+	defer cm.mutex.RUnlock()
+
+	for _, key := range keys {
+		if _, ok := cm.set[key]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (cm *concurrentMap[T]) loadFromReader(r io.Reader) error {
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return fmt.Errorf("failed to read workspace cache: %v", err)
+	}
+
+	if err := json.Unmarshal(b, &cm.set); err != nil {
+		return fmt.Errorf("failed to unmarshal workspace cache: %v", err)
+	}
+	return nil
 }
