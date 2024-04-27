@@ -116,7 +116,7 @@ pipeline:
 
 #### Pattern Behavior
 
-This section details the behavior of patterns in configuration files via [doublestar](https://github.com/bmatcuk/doublestar):
+This section details the behavior of patterns in configuration files via [doublestar](https://github.com/bmatcuk/doublestar).
 
 Special Terms | Meaning
 ------------- | -------
@@ -159,3 +159,4 @@ Options must be provided before the command and/or arguments. Otherwise, the opt
 - `--no-color`: Disable color output
 - `-r, --remote`: Use remote cache
 - `-t, --target <PATH>`: Load tasks from a specific target directory
+- `-v, --version`: Show version
