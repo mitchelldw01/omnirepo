@@ -16,7 +16,7 @@ import (
 // Reads, writes, and retrieves assets from the cache.
 type Cacher interface {
 	IsClean(node *graph.Node, deps map[string]struct{}) (bool, error)
-	GetTaskResult(node *graph.Node) (cache.TaskResult, error)
+	GetTaskResult(dir, name string) (cache.TaskResult, error)
 	WriteTaskResult(dir, name string, res cache.TaskResult) error
 	CleanUp(t time.Time) error
 }
@@ -62,7 +62,7 @@ func (e *Executor) executeTaskHelper(node *graph.Node, deps map[string]struct{})
 
 	var res cache.TaskResult
 	if isClean {
-		res, err = e.cache.GetTaskResult(node)
+		res, err = e.cache.GetTaskResult(node.Dir, node.Name)
 	} else {
 		res = e.executeTaskCommand(node.Pipeline.Command, node.Dir)
 	}
