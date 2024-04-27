@@ -1,7 +1,17 @@
 package cache
 
-// CACHE STRATEGY OVERVIEW
-//
+// READING INPUTS/RESULTS: When the cache for a given target directory is read, the tarball is first unpacked to a
+// temporary location (omni-prev-cache). The appropriate `inputs.json` or `results.json` is then
+// read into memory.
+
+// WRITING INPUTS/RESULTS: The results of given task are written to a temporary location (omni-next-cache) as
+// soon as they are received. Once all tasks are complete, tarballs are generated from this
+// location and written to their final destination.
+
+// RESTORING OUTPUTS: Once all tasks are complete, the cached outputs are copied from their
+// temporary location (omni-prev-cache) to the correct location in the user's workspace.
+
+// CACHE ASSET BREAKDOWN
 // - `workspace.json`: keys of the map are the hashes of workspace inputs
 // - `<dir>-meta.tar.zst`: tarball of all cache assets for the target directory
 //   - `inputs.json`: keys of the map are the hashes of target inputs
@@ -9,19 +19,9 @@ package cache
 //     - `outputs/<task>/`: the files produced by the given task
 //   - `results/`: the results of all tasks for the target directory
 //     - `<task>.json`: the output from the previous task run and if it failed or not
-//
-// READING INPUTS/RESULTS: When the cache for a given target directory is read, the tarball is first unpacked to a
-// temporary location (omni-prev-cache). The appropriate `inputs.json` or `results.json` is then
-// read into memory.
-//
-// WRITING INPUTS/RESULTS: The results of given task are written to a temporary location (omni-next-cache) as
-// soon as they are received. Once all tasks are complete, tarballs are generated from this
-// location and written to their final destination.
-//
-// OUTPUT RESTORATION: Once all tasks are complete, the cached outputs are copied from their
-// temporary location (omni-prev-cache) to the correct location in the user's workspace.
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -260,10 +260,35 @@ func (c *Cache) cacheContainsHashes(cache *concurrentMap[struct{}], paths []stri
 }
 
 func (c *Cache) GetTaskResult(node *graph.Node) (TaskResult, error) {
-	return TaskResult{}, nil
+	path := filepath.Join(c.prevCacheDir, node.Dir, "results", node.Name+".json")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return TaskResult{}, fmt.Errorf("failed to read task result %q: %v", path, err)
+	}
+
+	var res TaskResult
+	if err := json.Unmarshal(b, &res); err != nil {
+		return TaskResult{}, fmt.Errorf("failed to unmarshal task result: %v", err)
+	}
+
+	return res, nil
 }
 
-func (c *Cache) WriteTaskResult(id string, res TaskResult) error {
+func (c *Cache) WriteTaskResult(dir, name string, res TaskResult) error {
+	path := filepath.Join(c.nextCacheDir, dir, "results", name+".json")
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+
+	b, err := json.Marshal(res)
+	if err != nil {
+		return fmt.Errorf("failed to marshal task result: %v", err)
+	}
+
+	if err := os.WriteFile(path, b, 0644); err != nil {
+		return fmt.Errorf("failed to write cache result: %v", err)
+	}
+
 	return nil
 }
 
