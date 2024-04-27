@@ -229,11 +229,11 @@ func createAwsExecutor(
 }
 
 func createSystemExecutor(
-	project string,
+	workspace string,
 	targetCfgs map[string]usercfg.TargetConfig,
 	noCache bool,
 ) (graph.Executor, error) {
-	trans := sys.NewSystemTransport(project)
+	trans := sys.NewSystemTransport(workspace)
 	cache := cache.NewCache(trans, targetCfgs)
 	if err := cache.Init(); err != nil {
 		return nil, err
