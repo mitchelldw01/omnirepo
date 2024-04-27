@@ -15,13 +15,13 @@ import (
 )
 
 func TestLock(t *testing.T) {
-	project, table := "omnirepo", "omnirepo"
-	helper, err := newLockTestHelper(project, table)
+	workspace, table := "omnirepo", "omnirepo"
+	helper, err := newLockTestHelper(workspace, table)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	lock := omniAws.NewAwsLock(helper.client, project, table)
+	lock := omniAws.NewAwsLock(helper.client, workspace, table)
 
 	t.Run("should create the lock when it doesn't exist", func(t *testing.T) {
 		if err := helper.deleteTestLock(); err != nil {
@@ -73,13 +73,13 @@ func TestLock(t *testing.T) {
 }
 
 func TestUnlock(t *testing.T) {
-	project, table := "omnirepo", "omnirepo"
-	helper, err := newLockTestHelper(project, table)
+	workspace, table := "omnirepo", "omnirepo"
+	helper, err := newLockTestHelper(workspace, table)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	lock := omniAws.NewAwsLock(helper.client, project, table)
+	lock := omniAws.NewAwsLock(helper.client, workspace, table)
 
 	t.Run("should free the lock when it's currently locked", func(t *testing.T) {
 		if err := helper.lockTestLock(); err != nil {
@@ -123,12 +123,12 @@ func (er *dynamoEndpointResolver) ResolveEndpoint(service, region string) (aws.E
 }
 
 type lockTestHelper struct {
-	client  *dynamodb.Client
-	project string
-	table   string
+	client    *dynamodb.Client
+	workspace string
+	table     string
 }
 
-func newLockTestHelper(project, table string) (*lockTestHelper, error) {
+func newLockTestHelper(workspace, table string) (*lockTestHelper, error) {
 	client := dynamodb.NewFromConfig(aws.Config{
 		Region:           "us-east-1",
 		Credentials:      aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider("test", "test", "")),
@@ -140,9 +140,9 @@ func newLockTestHelper(project, table string) (*lockTestHelper, error) {
 	}
 
 	return &lockTestHelper{
-		client:  client,
-		project: project,
-		table:   table,
+		client:    client,
+		workspace: workspace,
+		table:     table,
 	}, nil
 }
 
@@ -175,13 +175,13 @@ func getCreateTableInput(table string) dynamodb.CreateTableInput {
 		TableName: &table,
 		AttributeDefinitions: []types.AttributeDefinition{
 			{
-				AttributeName: aws.String("ProjectName"),
+				AttributeName: aws.String("WorkspaceName"),
 				AttributeType: types.ScalarAttributeTypeS,
 			},
 		},
 		KeySchema: []types.KeySchemaElement{
 			{
-				AttributeName: aws.String("ProjectName"),
+				AttributeName: aws.String("WorkspaceName"),
 				KeyType:       types.KeyTypeHash,
 			},
 		},
@@ -196,7 +196,7 @@ func (lth *lockTestHelper) deleteTestLock() error {
 	input := &dynamodb.DeleteItemInput{
 		TableName: &lth.table,
 		Key: map[string]types.AttributeValue{
-			"ProjectName": &types.AttributeValueMemberS{Value: lth.project},
+			"WorkspaceName": &types.AttributeValueMemberS{Value: lth.workspace},
 		},
 	}
 
@@ -234,7 +234,7 @@ func (lth *lockTestHelper) getReadTestLockInput() dynamodb.GetItemInput {
 	return dynamodb.GetItemInput{
 		TableName: &lth.table,
 		Key: map[string]types.AttributeValue{
-			"ProjectName": &types.AttributeValueMemberS{Value: lth.project},
+			"WorkspaceName": &types.AttributeValueMemberS{Value: lth.workspace},
 		},
 		AttributesToGet: []string{
 			"LockAcquired",
@@ -263,7 +263,7 @@ func (lth *lockTestHelper) getUnlockTestLockInput() dynamodb.UpdateItemInput {
 	return dynamodb.UpdateItemInput{
 		TableName: aws.String(lth.table),
 		Key: map[string]types.AttributeValue{
-			"ProjectName": &types.AttributeValueMemberS{Value: lth.project},
+			"WorkspaceName": &types.AttributeValueMemberS{Value: lth.workspace},
 		},
 		UpdateExpression: aws.String("SET LockAcquired = :newval"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
@@ -296,7 +296,7 @@ func (lth *lockTestHelper) getLockTestLockInput() dynamodb.UpdateItemInput {
 	return dynamodb.UpdateItemInput{
 		TableName: aws.String(lth.table),
 		Key: map[string]types.AttributeValue{
-			"ProjectName": &types.AttributeValueMemberS{Value: lth.project},
+			"WorkspaceName": &types.AttributeValueMemberS{Value: lth.workspace},
 		},
 		UpdateExpression: aws.String("SET LockAcquired = :newval"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{

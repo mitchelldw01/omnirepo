@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-func NewDynamoClient(project, region string) (*dynamodb.Client, error) {
+func NewDynamoClient(workspace, region string) (*dynamodb.Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -29,16 +29,16 @@ func NewDynamoClient(project, region string) (*dynamodb.Client, error) {
 }
 
 type AwsLock struct {
-	client  *dynamodb.Client
-	project string
-	table   string
+	client    *dynamodb.Client
+	workspace string
+	table     string
 }
 
-func NewAwsLock(client *dynamodb.Client, project, table string) *AwsLock {
+func NewAwsLock(client *dynamodb.Client, workspace, table string) *AwsLock {
 	return &AwsLock{
-		client:  client,
-		project: project,
-		table:   table,
+		client:    client,
+		workspace: workspace,
+		table:     table,
 	}
 }
 
@@ -65,7 +65,7 @@ func (l *AwsLock) getLockInput() dynamodb.UpdateItemInput {
 	return dynamodb.UpdateItemInput{
 		TableName: aws.String(l.table),
 		Key: map[string]types.AttributeValue{
-			"ProjectName": &types.AttributeValueMemberS{Value: l.project},
+			"WorkspaceName": &types.AttributeValueMemberS{Value: l.workspace},
 		},
 		UpdateExpression: aws.String("SET LockAcquired = :newval"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
@@ -94,7 +94,7 @@ func (l *AwsLock) getUnlockInput() dynamodb.UpdateItemInput {
 	return dynamodb.UpdateItemInput{
 		TableName: aws.String(l.table),
 		Key: map[string]types.AttributeValue{
-			"ProjectName": &types.AttributeValueMemberS{Value: l.project},
+			"WorkspaceName": &types.AttributeValueMemberS{Value: l.workspace},
 		},
 		UpdateExpression: aws.String("SET LockAcquired = :newval"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{

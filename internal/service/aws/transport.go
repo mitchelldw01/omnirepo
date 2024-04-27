@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-func NewS3Client(project, region string) (*s3.Client, error) {
+func NewS3Client(workspace, region string) (*s3.Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -30,16 +30,16 @@ func NewS3Client(project, region string) (*s3.Client, error) {
 }
 
 type AwsTransport struct {
-	client  *s3.Client
-	project string
-	bucket  string
+	client    *s3.Client
+	workspace string
+	bucket    string
 }
 
-func NewAwsTransport(client *s3.Client, project, bucket string) *AwsTransport {
+func NewAwsTransport(client *s3.Client, workspace, bucket string) *AwsTransport {
 	return &AwsTransport{
-		client:  client,
-		project: project,
-		bucket:  bucket,
+		client:    client,
+		workspace: workspace,
+		bucket:    bucket,
 	}
 }
 
@@ -49,7 +49,7 @@ func (t *AwsTransport) Reader(key string) (io.ReadCloser, error) {
 
 	res, err := t.client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(t.bucket),
-		Key:    aws.String(path.Join(t.project, key)),
+		Key:    aws.String(path.Join(t.workspace, key)),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to read cache asset: %v", err)
@@ -68,7 +68,7 @@ func (t *AwsTransport) Writer(key string) (io.WriteCloser, error) {
 		client: t.client,
 		file:   tmp,
 		bucket: t.bucket,
-		key:    path.Join(t.project, key),
+		key:    path.Join(t.workspace, key),
 	}, nil
 }
 
