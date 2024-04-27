@@ -16,18 +16,18 @@ import (
 
 func TestLock(t *testing.T) {
 	project, table := "omnirepo", "omnirepo"
-	tester, err := newDynamoTester(project, table)
+	helper, err := newLockTestHelper(project, table)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	lock, err := omniAws.NewAwsLock(tester.client, project, table)
+	lock, err := omniAws.NewAwsLock(helper.client, project, table)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Run("should create the lock when it doesn't exist", func(t *testing.T) {
-		if err := tester.deleteTestLock(); err != nil {
+		if err := helper.deleteTestLock(); err != nil {
 			t.Fatal(err)
 		}
 
@@ -35,7 +35,7 @@ func TestLock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		isAcquired, err := tester.readTestLock()
+		isAcquired, err := helper.readTestLock()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -46,7 +46,7 @@ func TestLock(t *testing.T) {
 	})
 
 	t.Run("should acquire the lock when lock exists and is not acquired", func(t *testing.T) {
-		if err := tester.unlockTestLock(); err != nil {
+		if err := helper.unlockTestLock(); err != nil {
 			t.Fatal(err)
 		}
 
@@ -54,7 +54,7 @@ func TestLock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		isAcquired, err := tester.readTestLock()
+		isAcquired, err := helper.readTestLock()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -65,7 +65,7 @@ func TestLock(t *testing.T) {
 	})
 
 	t.Run("should return an error when the lock is already acquired", func(t *testing.T) {
-		if err := tester.lockTestLock(); err != nil {
+		if err := helper.lockTestLock(); err != nil {
 			t.Fatal(err)
 		}
 
@@ -77,18 +77,18 @@ func TestLock(t *testing.T) {
 
 func TestUnlock(t *testing.T) {
 	project, table := "omnirepo", "omnirepo"
-	tester, err := newDynamoTester(project, table)
+	helper, err := newLockTestHelper(project, table)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	lock, err := omniAws.NewAwsLock(tester.client, project, table)
+	lock, err := omniAws.NewAwsLock(helper.client, project, table)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Run("should free the lock when its currently locked", func(t *testing.T) {
-		if err := tester.lockTestLock(); err != nil {
+	t.Run("should free the lock when it's currently locked", func(t *testing.T) {
+		if err := helper.lockTestLock(); err != nil {
 			t.Fatal(err)
 		}
 
@@ -96,7 +96,7 @@ func TestUnlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		isAcquired, err := tester.readTestLock()
+		isAcquired, err := helper.readTestLock()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -107,7 +107,7 @@ func TestUnlock(t *testing.T) {
 	})
 
 	t.Run("should return an error when the lock is already unlocked", func(t *testing.T) {
-		if err := tester.unlockTestLock(); err != nil {
+		if err := helper.unlockTestLock(); err != nil {
 			t.Fatal(err)
 		}
 
@@ -128,13 +128,13 @@ func (er *dynamoEndpointResolver) ResolveEndpoint(service, region string) (aws.E
 	}, nil
 }
 
-type lockTester struct {
+type lockTestHelper struct {
 	client  *dynamodb.Client
 	project string
 	table   string
 }
 
-func newDynamoTester(project, table string) (*lockTester, error) {
+func newLockTestHelper(project, table string) (*lockTestHelper, error) {
 	client := dynamodb.NewFromConfig(aws.Config{
 		Region:           "us-east-1",
 		Credentials:      aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider("test", "test", "")),
@@ -145,7 +145,7 @@ func newDynamoTester(project, table string) (*lockTester, error) {
 		return nil, err
 	}
 
-	return &lockTester{
+	return &lockTestHelper{
 		client:  client,
 		project: project,
 		table:   table,
@@ -195,18 +195,18 @@ func getCreateTableInput(table string) dynamodb.CreateTableInput {
 	}
 }
 
-func (lt *lockTester) deleteTestLock() error {
+func (lth *lockTestHelper) deleteTestLock() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	input := &dynamodb.DeleteItemInput{
-		TableName: &lt.table,
+		TableName: &lth.table,
 		Key: map[string]types.AttributeValue{
-			"ProjectName": &types.AttributeValueMemberS{Value: lt.project},
+			"ProjectName": &types.AttributeValueMemberS{Value: lth.project},
 		},
 	}
 
-	_, err := lt.client.DeleteItem(ctx, input)
+	_, err := lth.client.DeleteItem(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -214,12 +214,12 @@ func (lt *lockTester) deleteTestLock() error {
 	return nil
 }
 
-func (lt *lockTester) readTestLock() (bool, error) {
+func (lth *lockTestHelper) readTestLock() (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	input := lt.getReadTestLockInput()
-	res, err := lt.client.GetItem(ctx, &input)
+	input := lth.getReadTestLockInput()
+	res, err := lth.client.GetItem(ctx, &input)
 	if err != nil {
 		return false, fmt.Errorf("failed to read test lock: %v", err)
 	}
@@ -236,11 +236,11 @@ func (lt *lockTester) readTestLock() (bool, error) {
 	return lockAcquired.Value, nil
 }
 
-func (lt *lockTester) getReadTestLockInput() dynamodb.GetItemInput {
+func (lth *lockTestHelper) getReadTestLockInput() dynamodb.GetItemInput {
 	return dynamodb.GetItemInput{
-		TableName: &lt.table,
+		TableName: &lth.table,
 		Key: map[string]types.AttributeValue{
-			"ProjectName": &types.AttributeValueMemberS{Value: lt.project},
+			"ProjectName": &types.AttributeValueMemberS{Value: lth.project},
 		},
 		AttributesToGet: []string{
 			"LockAcquired",
@@ -248,12 +248,12 @@ func (lt *lockTester) getReadTestLockInput() dynamodb.GetItemInput {
 	}
 }
 
-func (lt *lockTester) unlockTestLock() error {
+func (lth *lockTestHelper) unlockTestLock() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	input := lt.getUnlockTestLockInput()
-	if _, err := lt.client.UpdateItem(ctx, &input); err != nil {
+	input := lth.getUnlockTestLockInput()
+	if _, err := lth.client.UpdateItem(ctx, &input); err != nil {
 		var apiErr *types.ConditionalCheckFailedException
 		if ok := errors.As(err, &apiErr); ok {
 			return nil
@@ -265,11 +265,11 @@ func (lt *lockTester) unlockTestLock() error {
 	return nil
 }
 
-func (lt *lockTester) getUnlockTestLockInput() dynamodb.UpdateItemInput {
+func (lth *lockTestHelper) getUnlockTestLockInput() dynamodb.UpdateItemInput {
 	return dynamodb.UpdateItemInput{
-		TableName: aws.String(lt.table),
+		TableName: aws.String(lth.table),
 		Key: map[string]types.AttributeValue{
-			"ProjectName": &types.AttributeValueMemberS{Value: lt.project},
+			"ProjectName": &types.AttributeValueMemberS{Value: lth.project},
 		},
 		UpdateExpression: aws.String("SET LockAcquired = :newval"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
@@ -281,12 +281,12 @@ func (lt *lockTester) getUnlockTestLockInput() dynamodb.UpdateItemInput {
 	}
 }
 
-func (lt *lockTester) lockTestLock() error {
+func (lth *lockTestHelper) lockTestLock() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	input := lt.getLockTestLockInput()
-	if _, err := lt.client.UpdateItem(ctx, &input); err != nil {
+	input := lth.getLockTestLockInput()
+	if _, err := lth.client.UpdateItem(ctx, &input); err != nil {
 		var apiErr *types.ConditionalCheckFailedException
 		if ok := errors.As(err, &apiErr); ok {
 			return nil
@@ -298,11 +298,11 @@ func (lt *lockTester) lockTestLock() error {
 	return nil
 }
 
-func (lt *lockTester) getLockTestLockInput() dynamodb.UpdateItemInput {
+func (lth *lockTestHelper) getLockTestLockInput() dynamodb.UpdateItemInput {
 	return dynamodb.UpdateItemInput{
-		TableName: aws.String(lt.table),
+		TableName: aws.String(lth.table),
 		Key: map[string]types.AttributeValue{
-			"ProjectName": &types.AttributeValueMemberS{Value: lt.project},
+			"ProjectName": &types.AttributeValueMemberS{Value: lth.project},
 		},
 		UpdateExpression: aws.String("SET LockAcquired = :newval"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{

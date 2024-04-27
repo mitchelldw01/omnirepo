@@ -23,15 +23,15 @@ const (
 
 func TestReader(t *testing.T) {
 	project, bucket := "omnirepo", "omnirepo"
-	tester, err := newLockTester(project, bucket)
+	helper, err := newTransportTestHelper(project, bucket)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := tester.createTestObject(); err != nil {
+	if err := helper.createTestObject(); err != nil {
 		t.Fatal(err)
 	}
 
-	trans, err := omniAws.NewAwsTransport(tester.client, project, bucket)
+	trans, err := omniAws.NewAwsTransport(helper.client, project, bucket)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,15 +53,15 @@ func TestReader(t *testing.T) {
 
 func TestWriter(t *testing.T) {
 	project, bucket := "omnirepo", "omnirepo"
-	tester, err := newLockTester(project, bucket)
+	helper, err := newTransportTestHelper(project, bucket)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := tester.deleteTestObject(); err != nil {
+	if err := helper.deleteTestObject(); err != nil {
 		t.Fatal(err)
 	}
 
-	trans, err := omniAws.NewAwsTransport(tester.client, project, bucket)
+	trans, err := omniAws.NewAwsTransport(helper.client, project, bucket)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestWriter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	buf, err := tester.readTestObject()
+	buf, err := helper.readTestObject()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,13 +98,13 @@ func (er *s3EndpointResolver) ResolveEndpoint(service, region string) (aws.Endpo
 	}, nil
 }
 
-type transportTester struct {
+type transportTestHelper struct {
 	client  *s3.Client
 	project string
 	bucket  string
 }
 
-func newLockTester(project, bucket string) (*transportTester, error) {
+func newTransportTestHelper(project, bucket string) (*transportTestHelper, error) {
 	accessKeyId := os.Getenv("MINIO_ROOT_USER")
 	secretAccessKey := os.Getenv("MINIO_ROOT_PASSWORD")
 
@@ -120,7 +120,7 @@ func newLockTester(project, bucket string) (*transportTester, error) {
 		return nil, err
 	}
 
-	return &transportTester{
+	return &transportTestHelper{
 		client:  client,
 		project: project,
 		bucket:  bucket,
@@ -146,13 +146,13 @@ func createTestBucket(client *s3.Client, bucket string) error {
 	return nil
 }
 
-func (tt *transportTester) createTestObject() error {
+func (tth *transportTestHelper) createTestObject() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err := tt.client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(tt.bucket),
-		Key:    aws.String(path.Join(tt.project, key)),
+	_, err := tth.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(tth.bucket),
+		Key:    aws.String(path.Join(tth.project, key)),
 		Body:   strings.NewReader(body),
 	})
 	if err != nil {
@@ -162,21 +162,21 @@ func (tt *transportTester) createTestObject() error {
 	return nil
 }
 
-func (tt *transportTester) deleteTestObject() error {
+func (tth *transportTestHelper) deleteTestObject() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err := tt.client.HeadObject(ctx, &s3.HeadObjectInput{
-		Bucket: aws.String(tt.bucket),
-		Key:    aws.String(path.Join(tt.project, key)),
+	_, err := tth.client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(tth.bucket),
+		Key:    aws.String(path.Join(tth.project, key)),
 	})
 	if err != nil {
 		return nil
 	}
 
-	_, err = tt.client.DeleteObject(ctx, &s3.DeleteObjectInput{
-		Bucket: aws.String(tt.bucket),
-		Key:    aws.String(path.Join(tt.project, key)),
+	_, err = tth.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(tth.bucket),
+		Key:    aws.String(path.Join(tth.project, key)),
 	})
 	if err == nil {
 		return nil
@@ -185,10 +185,10 @@ func (tt *transportTester) deleteTestObject() error {
 	return fmt.Errorf("failed to delete object: %v", err)
 }
 
-func (tt *transportTester) readTestObject() (*strings.Builder, error) {
-	r, err := tt.client.GetObject(context.Background(), &s3.GetObjectInput{
-		Bucket: aws.String(tt.bucket),
-		Key:    aws.String(path.Join(tt.project, key)),
+func (tth *transportTestHelper) readTestObject() (*strings.Builder, error) {
+	r, err := tth.client.GetObject(context.Background(), &s3.GetObjectInput{
+		Bucket: aws.String(tth.bucket),
+		Key:    aws.String(path.Join(tth.project, key)),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get object: %v", err)
