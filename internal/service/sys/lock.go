@@ -1,6 +1,7 @@
 package sys
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,13 +11,17 @@ type SystemLock struct {
 	path string
 }
 
-func NewSystemLock() (SystemLock, error) {
+func NewSystemLock(project string) (SystemLock, error) {
+	if project == "" {
+		return SystemLock{}, errors.New("project name is not defined in workspace config")
+	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return SystemLock{}, fmt.Errorf("failed to initialize cache lock: %v", err)
 	}
 
-	path := filepath.Join(home, ".omni/cache/lock")
+	path := filepath.Join(home, ".omni/cache", project, "lock")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return SystemLock{}, err
 	}
