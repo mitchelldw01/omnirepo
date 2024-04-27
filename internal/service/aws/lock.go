@@ -34,19 +34,12 @@ type AwsLock struct {
 	table   string
 }
 
-func NewAwsLock(client *dynamodb.Client, project, table string) (*AwsLock, error) {
-	if project == "" {
-		return nil, errors.New("project name is not defined in workspace config")
-	}
-	if table == "" {
-		return nil, errors.New("table name is not defined in workspace config")
-	}
-
+func NewAwsLock(client *dynamodb.Client, project, table string) *AwsLock {
 	return &AwsLock{
 		client:  client,
 		project: project,
 		table:   table,
-	}, nil
+	}
 }
 
 func (l *AwsLock) Lock() error {

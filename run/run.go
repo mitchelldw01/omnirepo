@@ -119,7 +119,7 @@ func createCacheLock(workCfg usercfg.WorkspaceConfig) (CacheLocker, error) {
 		return nil, err
 	}
 
-	return aws.NewAwsLock(client, workCfg.Name, workCfg.RemoteCache.Table)
+	return aws.NewAwsLock(client, workCfg.Name, workCfg.RemoteCache.Table), nil
 }
 
 func listenForInterrupts(lock CacheLocker) {
@@ -247,6 +247,6 @@ func createAwsTransport(workCfg usercfg.WorkspaceConfig) (*aws.AwsTransport, err
 	if err != nil {
 		return nil, err
 	}
-	trans, err := aws.NewAwsTransport(s3Client, workCfg.Name, workCfg.RemoteCache.Bucket)
-	return trans, err
+	trans := aws.NewAwsTransport(s3Client, workCfg.Name, workCfg.RemoteCache.Bucket)
+	return trans, nil
 }

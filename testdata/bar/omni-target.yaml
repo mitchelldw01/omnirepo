@@ -1,0 +1,4 @@
+pipeline:
+  test:
+    command: "exit 0"
+    includes: ["main.txt"]

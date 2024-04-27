@@ -1,6 +1,7 @@
 package usercfg
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -36,5 +37,21 @@ func NewWorkspaceConfig() (WorkspaceConfig, error) {
 		return WorkspaceConfig{}, fmt.Errorf("failed to parse %q: %v", path, err)
 	}
 
-	return cfg, nil
+	return cfg, validateWorkspaceConfig(cfg)
+}
+
+func validateWorkspaceConfig(cfg WorkspaceConfig) error {
+	if cfg.Name == "" {
+		return errors.New("workspace name is not defined in config")
+	}
+	if !cfg.RemoteCache.Enabled {
+		return nil
+	}
+	if cfg.RemoteCache.Bucket == "" {
+		return fmt.Errorf("bucket name is not defined in workspace config")
+	}
+	if cfg.RemoteCache.Table == "" {
+		return fmt.Errorf("table name is not defined in workspace config")
+	}
+	return nil
 }
