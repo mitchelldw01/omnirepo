@@ -2,6 +2,7 @@ package log
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"sync"
@@ -83,7 +84,7 @@ func metricsNoColor(hits, total, failed int, duration time.Duration) {
 	}
 	fmt.Printf("Cache Hits:  %s\n", hitsTxt)
 
-	fmt.Printf("Duration:    %s\n", time.Duration.String(duration))
+	fmt.Printf("Duration:    %s\n", formatDuration(duration))
 }
 
 func metricsColor(hits, total, failed int, duration time.Duration) {
@@ -99,5 +100,26 @@ func metricsColor(hits, total, failed int, duration time.Duration) {
 	}
 	fmt.Printf("%sCache Hits:%s  %s\n", Bold, Reset, hitsTxt)
 
-	fmt.Printf("%sDuration:%s    %s\n", Bold, Reset, time.Duration.String(duration))
+	durationTxt := formatDuration(duration)
+	if hits == total {
+		durationTxt += " 🔥"
+	}
+	fmt.Printf("%sDuration:%s    %s\n", Bold, Reset, durationTxt)
+}
+
+func formatDuration(duration time.Duration) string {
+	totalSeconds := duration.Seconds()
+	totalMinutes := int(totalSeconds / 60)
+	seconds := math.Mod(totalSeconds, 60)
+	milliseconds := duration.Milliseconds()
+
+	if totalMinutes >= 1 {
+		return fmt.Sprintf("%d:%02d min", totalMinutes, int(seconds))
+	}
+
+	if totalSeconds < 1 {
+		return fmt.Sprintf("%d ms", milliseconds)
+	}
+
+	return fmt.Sprintf("%.3f sec", totalSeconds)
 }
