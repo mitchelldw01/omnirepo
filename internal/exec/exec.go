@@ -81,6 +81,7 @@ func (e *Executor) processTaskResult(node *graph.Node, isClean bool, res cache.T
 
 	log.TaskOutput(node.Id, res.Output)
 	if isClean {
+		e.metrics.hits.increment()
 		return nil
 	}
 
