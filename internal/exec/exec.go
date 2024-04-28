@@ -79,7 +79,14 @@ func (e *Executor) processTaskResult(node *graph.Node, isClean bool, res cache.T
 		e.metrics.failed.put(node.Id)
 	}
 
-	log.TaskOutput(node.Id, res.Output)
+	var logs string
+	if isClean {
+		logs = "cache hit, replaying logs...\n" + res.Output
+	} else {
+		logs = "cache miss, executing task...\n" + res.Output
+	}
+
+	log.TaskOutput(node.Id, logs)
 	if isClean {
 		e.metrics.hits.increment()
 		return nil
