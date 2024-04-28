@@ -1,0 +1,16 @@
+dependencies:
+  - bar
+
+workspaceAssets:
+  - workspace.txt
+
+pipeline:
+  test:
+    dependsOn:
+      - ^test
+    includes:
+      - "*.txt"
+    excludes:
+      - exclude.txt
+    outputs:
+      - output.txt
