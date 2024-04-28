@@ -172,7 +172,7 @@ func (c *Cache) isWorkspaceClean(dir string) (bool, error) {
 
 	connMap, err := c.getWorkspaceCache()
 	if err != nil && !isNotExistError(err) {
-		return false, err
+		return false, fmt.Errorf("failed to read cache file: %v", err)
 	}
 	if len(paths) == 0 {
 		if isNotExistError(err) {

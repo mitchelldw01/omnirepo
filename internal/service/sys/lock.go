@@ -10,13 +10,13 @@ type SystemLock struct {
 	path string
 }
 
-func NewSystemLock(workspace string) (SystemLock, error) {
+func NewSystemLock() (SystemLock, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return SystemLock{}, fmt.Errorf("failed to initialize cache lock: %v", err)
 	}
 
-	path := filepath.Join(home, ".omni/cache", workspace, "lock")
+	path := filepath.Join(home, ".omni/cache/lock")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return SystemLock{}, fmt.Errorf("failed to create cache directory %q: %v", path, err)
 	}
