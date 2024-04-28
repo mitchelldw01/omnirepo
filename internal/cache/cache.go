@@ -349,8 +349,8 @@ func (c *Cache) getWorkspacePaths() ([]string, error) {
 	return getCacheableWorkspacePaths(patterns, c.targets)
 }
 
-func (c *Cache) writeWorkspaceCache(hashMap map[string]struct{}) error {
-	b, err := json.Marshal(hashMap)
+func (c *Cache) writeWorkspaceCache(hashes map[string]struct{}) error {
+	b, err := json.Marshal(hashes)
 	if err != nil {
 		return err
 	}
@@ -365,26 +365,26 @@ func (c *Cache) writeWorkspaceCache(hashMap map[string]struct{}) error {
 	return err
 }
 
-func (c *Cache) updateTargetCache(dir string, hashMap map[string]struct{}) error {
-	includes := c.concatIncludesPatterns(c.targetConfigs[dir], hashMap)
-	excludes := c.concatExcludesPatterns(c.targetConfigs[dir], hashMap)
+func (c *Cache) updateTargetCache(dir string, hashes map[string]struct{}) error {
+	includes := c.concatIncludesPatterns(c.targetConfigs[dir], hashes)
+	excludes := c.concatExcludesPatterns(c.targetConfigs[dir], hashes)
 	paths, err := getCacheableTargetPaths(dir, includes, excludes)
 	if err != nil {
 		return err
 	}
 
-	hashes, err := c.computeHashMap(paths)
+	hashMap, err := c.computeHashMap(paths)
 	if err != nil {
 		return err
 	}
 
-	return c.writeTargetCache(dir, hashes)
+	return c.writeTargetCache(dir, hashMap)
 }
 
-func (c *Cache) concatIncludesPatterns(cfg usercfg.TargetConfig, hashMap map[string]struct{}) []string {
+func (c *Cache) concatIncludesPatterns(cfg usercfg.TargetConfig, hashes map[string]struct{}) []string {
 	patternSet := map[string]struct{}{}
 
-	for task := range hashMap {
+	for task := range hashes {
 		for _, pattern := range cfg.Pipeline[task].Includes {
 			patternSet[pattern] = struct{}{}
 		}
@@ -398,10 +398,10 @@ func (c *Cache) concatIncludesPatterns(cfg usercfg.TargetConfig, hashMap map[str
 	return patterns
 }
 
-func (c *Cache) concatExcludesPatterns(cfg usercfg.TargetConfig, hashMap map[string]struct{}) []string {
+func (c *Cache) concatExcludesPatterns(cfg usercfg.TargetConfig, hashes map[string]struct{}) []string {
 	patternSet := map[string]struct{}{}
 
-	for task := range hashMap {
+	for task := range hashes {
 		for _, pattern := range cfg.Pipeline[task].Excludes {
 			patternSet[pattern] = struct{}{}
 		}

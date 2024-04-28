@@ -52,7 +52,7 @@ func (t *AwsTransport) Reader(key string) (io.ReadCloser, error) {
 		Key:    aws.String(path.Join(t.workspace, key)),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to read cache asset: %v", err)
+		return nil, err
 	}
 
 	return res.Body, nil
