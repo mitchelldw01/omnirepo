@@ -7,8 +7,7 @@ import (
 	"path/filepath"
 )
 
-type SystemTransport struct {
-}
+type SystemTransport struct{}
 
 func NewSystemTransport() SystemTransport {
 	return SystemTransport{}

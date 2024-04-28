@@ -285,7 +285,7 @@ func (c *Cache) GetTaskResult(dir, name string) (TaskResult, error) {
 
 func (c *Cache) WriteTaskResult(dir, name string, res TaskResult) error {
 	path := filepath.Join(c.nextCacheDir, dir, "results", name+".json")
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
 
@@ -294,7 +294,7 @@ func (c *Cache) WriteTaskResult(dir, name string, res TaskResult) error {
 		return fmt.Errorf("failed to marshal task result: %v", err)
 	}
 
-	if err := os.WriteFile(path, b, 0644); err != nil {
+	if err := os.WriteFile(path, b, 0o644); err != nil {
 		return fmt.Errorf("failed to write cache result: %v", err)
 	}
 
@@ -417,7 +417,7 @@ func (c *Cache) concatExcludesPatterns(cfg usercfg.TargetConfig, hashes map[stri
 
 func (c *Cache) writeTargetCache(dir string, hashes map[string]struct{}) error {
 	tmp := filepath.Join(c.nextCacheDir, dir)
-	if err := os.MkdirAll(tmp, 0755); err != nil {
+	if err := os.MkdirAll(tmp, 0o755); err != nil {
 		return fmt.Errorf("failed to create cache directory: %v", err)
 	}
 
@@ -441,7 +441,7 @@ func (c *Cache) writeInputsCache(dir string, hashes map[string]struct{}) error {
 	}
 
 	path := filepath.Join(dir, "inputs.json")
-	if err := os.WriteFile(path, inputsJson, 0644); err != nil {
+	if err := os.WriteFile(path, inputsJson, 0o644); err != nil {
 		return fmt.Errorf("failed to write cache file: %v", err)
 	}
 
