@@ -8,6 +8,8 @@ Omnirepo is a task runner that executes tasks in topological order, parallelizin
 
 It uses caching to prevent rerunning tasks when nothing has changed, and to restore artifacts produced by tasks. In addition to local caching with the user's file system, remote caching is possible with AWS [S3](https://aws.amazon.com/s3/) and [DynamoDB](https://aws.amazon.com/dynamodb/). Remote caching enables shared caches between different environments such as CI pipelines.
 
+![example](./example.svg)
+
 ## Installation
 
 Users on UNIX-based systems can use the following command to install Omnirepo:
