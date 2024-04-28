@@ -9,7 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/briandowns/spinner"
+	"github.com/mitchelldw01/omnirepo/internal/log"
 	"github.com/mitchelldw01/omnirepo/usercfg"
 )
 
@@ -53,6 +56,16 @@ func (w *CacheWriter) WriteTaskResult(dir, name string, res TaskResult) error {
 }
 
 func (w *CacheWriter) Update() error {
+	if w.reader.isWorkValid && w.reader.invalidNodes.size() == 0 {
+		return nil
+	}
+
+	s, err := w.startSpinner()
+	if err != nil {
+		return err
+	}
+	defer s.Stop()
+
 	if err := w.updateWorkspace(); err != nil {
 		return err
 	}
@@ -68,6 +81,23 @@ func (w *CacheWriter) Update() error {
 	}
 
 	return nil
+}
+
+func (w *CacheWriter) startSpinner() (*spinner.Spinner, error) {
+	fmt.Print("\n")
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	s.Suffix = " Updating cache..."
+	s.FinalMSG = "Cache update complete.\n"
+
+	if !log.NoColor {
+		s.FinalMSG = "✅ " + s.FinalMSG
+		if err := s.Color("cyan"); err != nil {
+			return nil, err
+		}
+	}
+
+	s.Start()
+	return s, nil
 }
 
 func (w *CacheWriter) updateWorkspace() error {

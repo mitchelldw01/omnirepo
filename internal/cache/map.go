@@ -94,3 +94,11 @@ func (ncm *nestedConcurrentMap[T]) toUnsafeMap() map[string]map[string]T {
 	}
 	return hashMap
 }
+
+func (ncm *nestedConcurrentMap[T]) size() int {
+	size := 0
+	for _, val := range ncm.data {
+		size += len(val.data)
+	}
+	return size
+}
