@@ -53,7 +53,7 @@ func TaskOutput(id, out string) {
 	for _, line := range lines {
 		if NoColor {
 			fmt.Printf("%s: %s\n", id, line)
-			return
+			continue
 		}
 		fmt.Printf("%s%s:%s %s\n", colorCode, id, Reset, line)
 	}
