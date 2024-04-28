@@ -143,7 +143,7 @@ func (c *Cache) isCleanHelper(node *graph.Node, deps map[string]struct{}) (bool,
 		return false, nil
 	}
 
-	return false, nil
+	return true, nil
 }
 
 func (c *Cache) hasInvalidDependency(deps map[string]struct{}) bool {
