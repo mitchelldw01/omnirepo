@@ -46,7 +46,8 @@ func Error(v ...any) {
 
 func TaskOutput(id, out string) {
 	mutex.Lock()
-	defer mutex.Unlock()
+	colorCode := codes[index]
+	index = (index + 1) % len(codes)
 
 	lines := strings.Split(out, "\n")
 	for _, line := range lines {
@@ -54,11 +55,10 @@ func TaskOutput(id, out string) {
 			fmt.Printf("%s: %s\n", id, line)
 			return
 		}
-
-		colorCode := codes[index]
-		index = (index + 1) % len(codes)
 		fmt.Printf("%s%s:%s %s\n", colorCode, id, Reset, line)
 	}
+
+	mutex.Unlock()
 }
 
 func Metrics(hits, total, failed int, duration time.Duration) {
