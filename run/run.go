@@ -85,7 +85,7 @@ func runTreeCommand(tasks []string, opts Options) error {
 	return nil
 }
 
-func runRunCommand(tasks []string, opts Options) error {
+func runRunCommand(tasks []string, opts Options) (err error) {
 	workCfg, targetCfgs, err := parseConfigs(opts.Target)
 	if err != nil {
 		return err
@@ -98,6 +98,11 @@ func runRunCommand(tasks []string, opts Options) error {
 	if err := lock.Lock(); err != nil {
 		return err
 	}
+	defer func() {
+		if unlockErr := lock.Unlock(); err != nil {
+			err = unlockErr
+		}
+	}()
 	listenForInterrupts(lock)
 
 	graph, err := createDependencyGraph(workCfg, targetCfgs, tasks, opts)
@@ -111,7 +116,7 @@ func runRunCommand(tasks []string, opts Options) error {
 
 func createCacheLock(workCfg usercfg.WorkspaceConfig) (CacheLocker, error) {
 	if !workCfg.RemoteCache.Enabled {
-		return sys.NewSystemLock(workCfg.Name)
+		return sys.NewSystemLock()
 	}
 
 	client, err := aws.NewDynamoClient(workCfg.Name, workCfg.RemoteCache.Region)
@@ -196,7 +201,7 @@ func createDependencyGraph(
 	if workCfg.RemoteCache.Enabled {
 		ex, err = createAwsExecutor(workCfg, targetCfgs, opts.NoCache)
 	} else {
-		ex, err = createSystemExecutor(workCfg.Name, targetCfgs, opts.NoCache)
+		ex, err = createSystemExecutor(targetCfgs, opts.NoCache)
 	}
 	if err != nil {
 		return nil, err
@@ -229,11 +234,10 @@ func createAwsExecutor(
 }
 
 func createSystemExecutor(
-	workspace string,
 	targetCfgs map[string]usercfg.TargetConfig,
 	noCache bool,
 ) (graph.Executor, error) {
-	trans := sys.NewSystemTransport(workspace)
+	trans := sys.NewSystemTransport()
 	cache := cache.NewCache(trans, targetCfgs)
 	if err := cache.Init(); err != nil {
 		return nil, err

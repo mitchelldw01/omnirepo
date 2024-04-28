@@ -12,9 +12,8 @@ import (
 )
 
 const (
-	workspace = "omnirepo"
-	key       = "test.txt"
-	body      = "lorem ipsum dolor sit amet"
+	key  = "test.txt"
+	body = "lorem ipsum dolor sit amet"
 )
 
 func TestReader(t *testing.T) {
@@ -29,7 +28,7 @@ func TestReader(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		r, err := sys.NewSystemTransport(workspace).Reader(key)
+		r, err := sys.NewSystemTransport().Reader(key)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -52,7 +51,7 @@ func TestReader(t *testing.T) {
 		}
 		defer os.RemoveAll(dir)
 
-		_, err = sys.NewSystemTransport(workspace).Reader(key)
+		_, err = sys.NewSystemTransport().Reader(key)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -66,7 +65,7 @@ func TestWriter(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	w, err := sys.NewSystemTransport(workspace).Writer(key)
+	w, err := sys.NewSystemTransport().Writer(key)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +76,7 @@ func TestWriter(t *testing.T) {
 		t.Fatalf("failed to write to file: %v", err)
 	}
 
-	b, err := os.ReadFile(filepath.Join(".omni/cache", workspace, key))
+	b, err := os.ReadFile(filepath.Join(".omni/cache", key))
 	if err != nil {
 		t.Fatalf("failed to read file: %v", err)
 	}
@@ -102,7 +101,7 @@ func changeWorkingDirectory() (string, error) {
 }
 
 func createTestFile(dir string) error {
-	path := filepath.Join(dir, ".omni/cache", workspace, key)
+	path := filepath.Join(dir, ".omni/cache", key)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("failed to create test directory: %v", err)
 	}
