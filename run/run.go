@@ -225,13 +225,13 @@ func createAwsExecutor(
 		return nil, err
 	}
 
-	r := cache.NewCacheReader(trans, targetCfgs, workCfg.Targets)
+	r := cache.NewCacheReader(trans, targetCfgs, workCfg.Targets, noCache)
 	w := cache.NewCacheWriter(trans, r)
 	if err := cache.Init(); err != nil {
 		return nil, err
 	}
 
-	return exec.NewExecutor(r, w, noCache), nil
+	return exec.NewExecutor(r, w), nil
 }
 
 func createSystemExecutor(
@@ -240,13 +240,13 @@ func createSystemExecutor(
 	noCache bool,
 ) (graph.Executor, error) {
 	trans := sys.NewSystemTransport()
-	r := cache.NewCacheReader(trans, targetCfgs, targets)
+	r := cache.NewCacheReader(trans, targetCfgs, targets, noCache)
 	w := cache.NewCacheWriter(trans, r)
 	if err := cache.Init(); err != nil {
 		return nil, err
 	}
 
-	return exec.NewExecutor(r, w, noCache), nil
+	return exec.NewExecutor(r, w), nil
 }
 
 func createAwsTransport(workCfg usercfg.WorkspaceConfig) (*aws.AwsTransport, error) {

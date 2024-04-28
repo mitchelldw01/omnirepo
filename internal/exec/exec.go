@@ -26,15 +26,13 @@ type CacheWriter interface {
 type Executor struct {
 	reader  CacheReader
 	writer  CacheWriter
-	noCache bool
 	metrics *runtimeMetrics
 }
 
-func NewExecutor(cr CacheReader, cw CacheWriter, noCache bool) *Executor {
+func NewExecutor(cr CacheReader, cw CacheWriter) *Executor {
 	return &Executor{
 		reader:  cr,
 		writer:  cw,
-		noCache: noCache,
 		metrics: newRuntimeMetrics(),
 	}
 }

@@ -37,9 +37,15 @@ type CacheReader struct {
 	// Ensures thread-safe initializion of the workspace cache
 	initWorkLock sync.Mutex
 	isWorkValid  bool
+	noCache      bool
 }
 
-func NewCacheReader(tr TransportReader, configs map[string]usercfg.TargetConfig, targets []string) *CacheReader {
+func NewCacheReader(
+	tr TransportReader,
+	configs map[string]usercfg.TargetConfig,
+	targets []string,
+	noCache bool,
+) *CacheReader {
 	cleaned := make([]string, 0, len(configs))
 	for target := range configs {
 		cleaned = append(targets, filepath.Clean(target))
@@ -56,6 +62,7 @@ func NewCacheReader(tr TransportReader, configs map[string]usercfg.TargetConfig,
 		invalidNodes:  newNestedConcurrentMap[struct{}](),
 		initWorkLock:  sync.Mutex{},
 		isWorkValid:   true,
+		noCache:       noCache,
 	}
 }
 
@@ -82,13 +89,17 @@ func (r *CacheReader) Validate(node *graph.Node, deps map[string]struct{}) (bool
 	r.outputs.data[node.Dir] = append(r.outputs.data[node.Dir], node.Pipeline.Outputs...)
 	r.outputs.mutex.Unlock()
 
-	isClean, err := r.validateAll(node, deps)
-	if !isClean {
+	var valid bool
+	var err error
+	if !r.noCache {
+		valid, err = r.validateAll(node, deps)
+	}
+	if !valid {
 		nameSet, _ := r.invalidNodes.getOrPut(node.Dir)
 		nameSet.put(node.Name, struct{}{})
 	}
 
-	return isClean, err
+	return valid, err
 }
 
 func (r *CacheReader) validateAll(node *graph.Node, deps map[string]struct{}) (bool, error) {

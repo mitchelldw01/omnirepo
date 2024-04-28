@@ -52,7 +52,7 @@ func TestExecTask(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := writer{}
-			ex := exec.NewExecutor(&reader{}, &w, false)
+			ex := exec.NewExecutor(&reader{}, &w)
 
 			ex.ExecuteTask(graph.NewNode("", "", usercfg.PipelineConfig{
 				Command: tc.cmd,
