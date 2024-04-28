@@ -1,0 +1,7 @@
+workspaceAssets:
+  - workspace.txt
+
+pipeline:
+  test:
+    includes:
+      - "*.txt"
