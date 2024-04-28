@@ -1,17 +1,16 @@
 package cache
 
-// READING INPUTS/RESULTS: When the cache for a given target directory is read, the tarball is first unpacked to a
-// temporary location (omni-prev-cache). The appropriate `inputs.json` or `results.json` is then
-// read into memory.
+// READING ARTIFACTS: When the cache for a given target directory is read, the tarball is first unpacked to a
+// temporary location (omni-prev-cache). Artifacts are then read from that location into memory when needed.
 
-// WRITING INPUTS/RESULTS: The results of given task are written to a temporary location (omni-next-cache) as
-// soon as they are received. Once all tasks are complete, tarballs are generated from this
-// location and written to their final destination.
+// WRITING ARTIFACTS: Artifacts are written to a temporary location (omni-next-cache). Task results are written as
+// soon as they are received, but inputs and outputs are written once all tasks are complete. Finally,
+// tarballs are generated from this location and written to their final destination
 
-// RESTORING OUTPUTS: Once all tasks are complete, the cached outputs are copied from their
+// RESTORING ARTIFACTS: Once all tasks are complete, the cached outputs are copied from their
 // temporary location (omni-prev-cache) to the correct location in the user's workspace.
 
-// CACHE ASSET BREAKDOWN
+// CACHE DIRECTORY BREAKDOWN
 // - `workspace.json`: keys of the map are the hashes of workspace inputs
 // - `<dir>-meta.tar.zst`: tarball of all cache assets for the target directory
 //   - `inputs.json`: keys of the map are the hashes of target inputs
@@ -24,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -312,6 +312,10 @@ func (c *Cache) CleanUp() error {
 		}
 	}
 
+	if err := c.restoreOutputs(); err != nil {
+		return fmt.Errorf("failed to restore cached outputs: %v", err)
+	}
+
 	return nil
 }
 
@@ -508,27 +512,59 @@ func (c *Cache) computeHashMap(paths []string) (map[string]struct{}, error) {
 	return hashMap, nil
 }
 
-// func (c *Cache) restoreOutputs() error {
-// 	var wg sync.WaitGroup
-// 	ch := make(chan error, 1)
+func (c *Cache) restoreOutputs() error {
+	var wg sync.WaitGroup
+	ch := make(chan error, 1)
 
-// 	for dir, outputs := range c.outputs.toUnsafeMap() {
-// 		wg.Add(1)
-// 		go func(dir string, outputs []string) {
-// 			defer wg.Done()
-// 			if err := c.restoreTargetOutputs(dir, outputs); err != nil {
-// 				select {
-// 				case ch <- err:
-// 				default:
-// 				}
-// 			}
-// 		}(dir, outputs)
-// 	}
+	for dir, outputs := range c.outputs.toUnsafeMap() {
+		wg.Add(1)
+		go func(dir string, outputs []string) {
+			defer wg.Done()
+			if err := c.restoreTargetOutputs(dir); err != nil {
+				select {
+				case ch <- err:
+				default:
+				}
+			}
+		}(dir, outputs)
+	}
 
-// 	go func() {
-// 		wg.Wait()
-// 		close(ch)
-// 	}()
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
 
-// 	return <-ch
-// }
+	return <-ch
+}
+
+func (c *Cache) restoreTargetOutputs(dir string) error {
+	src := filepath.Join(c.prevCacheDir, dir, "outputs")
+	if _, err := os.Stat(src); os.IsNotExist(err) {
+		return nil
+	}
+
+	return c.copyDir(src, dir)
+}
+
+func (c *Cache) copyDir(src, dst string) error {
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		return err
+	}
+
+	return filepath.Walk(src, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		dstPath := filepath.Join(dst, rel)
+
+		if info.IsDir() {
+			return os.MkdirAll(dstPath, 0o755)
+		}
+		return c.copyOutputArtifact(path, dstPath)
+	})
+}
