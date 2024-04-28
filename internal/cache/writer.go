@@ -61,10 +61,9 @@ func (w *CacheWriter) Update() error {
 	}
 
 	s, err := w.startSpinner()
-	if err != nil {
-		return err
+	if err == nil {
+		defer s.Stop()
 	}
-	defer s.Stop()
 
 	if err := w.updateWorkspace(); err != nil {
 		return err
