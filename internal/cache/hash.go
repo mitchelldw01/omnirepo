@@ -8,6 +8,8 @@ import (
 	"os"
 )
 
+// Stateful hasher that will only hash the same file path once.
+// When it encounters a file path it's already hashed, it will use the previous result.
 type sha256Hasher struct {
 	hashes *concurrentMap[string]
 }
@@ -29,7 +31,7 @@ func (h *sha256Hasher) hash(paths ...string) ([]string, error) {
 
 		hash, err := h.computeHash(path)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to hash file %q: %v", path, err)
 		}
 		h.hashes.put(path, hash)
 		hashes = append(hashes, hash)
@@ -41,17 +43,17 @@ func (h *sha256Hasher) hash(paths ...string) ([]string, error) {
 func (h *sha256Hasher) computeHash(path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to open file %q: %v", path, err)
+		return "", err
 	}
 	defer file.Close()
 
 	hash := sha256.New()
 	if _, err := hash.Write([]byte(path)); err != nil {
-		return "", fmt.Errorf("failed to hash file %q: %v", path, err)
+		return "", err
 	}
 
 	if _, err := io.Copy(hash, file); err != nil {
-		return "", fmt.Errorf("failed to hash file %q: %v", path, err)
+		return "", err
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil

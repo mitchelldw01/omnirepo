@@ -201,7 +201,7 @@ func createDependencyGraph(
 	if workCfg.RemoteCache.Enabled {
 		ex, err = createAwsExecutor(workCfg, targetCfgs, opts.NoCache)
 	} else {
-		ex, err = createSystemExecutor(targetCfgs, opts.NoCache)
+		ex, err = createSystemExecutor(workCfg.Targets, targetCfgs, opts.NoCache)
 	}
 	if err != nil {
 		return nil, err
@@ -225,25 +225,28 @@ func createAwsExecutor(
 		return nil, err
 	}
 
-	cache := cache.NewCache(trans, targetCfgs)
+	r := cache.NewCacheReader(trans, targetCfgs, workCfg.Targets)
+	w := cache.NewCacheWriter(trans, r)
 	if err := cache.Init(); err != nil {
 		return nil, err
 	}
 
-	return exec.NewExecutor(cache, noCache), nil
+	return exec.NewExecutor(r, w, noCache), nil
 }
 
 func createSystemExecutor(
+	targets []string,
 	targetCfgs map[string]usercfg.TargetConfig,
 	noCache bool,
 ) (graph.Executor, error) {
 	trans := sys.NewSystemTransport()
-	cache := cache.NewCache(trans, targetCfgs)
+	r := cache.NewCacheReader(trans, targetCfgs, targets)
+	w := cache.NewCacheWriter(trans, r)
 	if err := cache.Init(); err != nil {
 		return nil, err
 	}
 
-	return exec.NewExecutor(cache, noCache), nil
+	return exec.NewExecutor(r, w, noCache), nil
 }
 
 func createAwsTransport(workCfg usercfg.WorkspaceConfig) (*aws.AwsTransport, error) {

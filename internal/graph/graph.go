@@ -11,10 +11,11 @@ import (
 	"github.com/mitchelldw01/omnirepo/usercfg"
 )
 
-// Both executes task commands and interfaces with the cache.
+// Both executes task commands and finalizes the task results.
+// Finalizing results consists of creating the final cache artifacts and printing metrics.
 type Executor interface {
 	ExecuteTask(node *Node, deps map[string]struct{})
-	CleanUp(t time.Time)
+	FinalizeResults(t time.Time)
 }
 
 type DependencyGraph struct {
@@ -25,12 +26,12 @@ type DependencyGraph struct {
 	targetConfigs map[string]usercfg.TargetConfig
 }
 
-func NewDependencyGraph(ex Executor, targetCfgs map[string]usercfg.TargetConfig) *DependencyGraph {
+func NewDependencyGraph(ex Executor, configs map[string]usercfg.TargetConfig) *DependencyGraph {
 	return &DependencyGraph{
 		Nodes:         map[string]*Node{},
 		Dependencies:  map[string]map[string]struct{}{},
 		exec:          ex,
-		targetConfigs: targetCfgs,
+		targetConfigs: configs,
 	}
 }
 
@@ -218,7 +219,7 @@ func (dg *DependencyGraph) ExecuteTasks() {
 	}
 
 	wg.Wait()
-	dg.exec.CleanUp(t)
+	dg.exec.FinalizeResults(t)
 }
 
 func (dg *DependencyGraph) invertDependencies() map[string]map[string]struct{} {

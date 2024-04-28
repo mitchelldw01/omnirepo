@@ -40,10 +40,10 @@ func (l SystemLock) Lock() error {
 func (l SystemLock) Unlock() error {
 	err := os.Remove(l.path)
 	if os.IsNotExist(err) {
-		return fmt.Errorf("cannot free lock because it is not currently acquired")
+		return fmt.Errorf("failed to release cache lock because it is not currently acquired")
 	}
 	if err != nil {
-		return fmt.Errorf("failed to unlock cache: %v", err)
+		return fmt.Errorf("failed to release cache lock: %v", err)
 	}
 
 	return nil
