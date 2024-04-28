@@ -16,13 +16,13 @@ Users on UNIX-based systems can use the following command to install Omnirepo:
 curl -sSL https://raw.githubusercontent.com/mitchelldw01/omnirepo/main/install.sh | sh
 ```
 
-For Windows users, you can download the appropriate binary from the [releases](https://github.com/mitchelldw01/omnirepo/releases) page.
-
 Go developers can build from source:
 
 ```sh
 go install github.com/mitchelldw01/omnirepo@latest
 ```
+
+For Windows users, you can download the appropriate tarball from the [releases](https://github.com/mitchelldw01/omnirepo/releases) page. Extract the contents and move the binary executable somewhere in your path.
 
 ## Getting Started
 
@@ -85,8 +85,6 @@ remoteCache:
     table: my-table
     region: us-east-1
 ```
-
-
 
 ### Target Configuration
 
