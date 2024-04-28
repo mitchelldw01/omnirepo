@@ -420,8 +420,10 @@ func (c *Cache) writeTargetCache(dir string, hashes map[string]struct{}) error {
 	if err := os.MkdirAll(tmp, 0o755); err != nil {
 		return fmt.Errorf("failed to create cache directory: %v", err)
 	}
-
 	if err := c.writeInputsCache(tmp, hashes); err != nil {
+		return err
+	}
+	if err := c.writeOutputsCache(dir, c.outputs.data[dir]); err != nil {
 		return err
 	}
 
@@ -448,6 +450,50 @@ func (c *Cache) writeInputsCache(dir string, hashes map[string]struct{}) error {
 	return nil
 }
 
+func (c *Cache) writeOutputsCache(dir string, patterns []string) error {
+	paths, err := getOutputPaths(dir, patterns)
+	if err != nil {
+		return err
+	}
+
+	for _, path := range paths {
+		dst := filepath.Join(c.nextCacheDir, dir, "outputs", c.removeTargetDirectory(path))
+		if err := c.copyOutputArtifact(path, dst); err != nil {
+			return fmt.Errorf("failed to write output to cache: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (c *Cache) removeTargetDirectory(path string) string {
+	cleaned := filepath.Clean(path)
+	trimmed := strings.TrimPrefix(cleaned, string(filepath.Separator))
+	parts := strings.Split(trimmed, string(filepath.Separator))
+	return filepath.Join(parts[1:]...)
+}
+
+func (c *Cache) copyOutputArtifact(src, dst string) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, srcFile)
+	return err
+}
+
 func (c *Cache) computeHashMap(paths []string) (map[string]struct{}, error) {
 	hashes, err := c.hasher.hash(paths...)
 	if err != nil {
@@ -461,3 +507,28 @@ func (c *Cache) computeHashMap(paths []string) (map[string]struct{}, error) {
 
 	return hashMap, nil
 }
+
+// func (c *Cache) restoreOutputs() error {
+// 	var wg sync.WaitGroup
+// 	ch := make(chan error, 1)
+
+// 	for dir, outputs := range c.outputs.toUnsafeMap() {
+// 		wg.Add(1)
+// 		go func(dir string, outputs []string) {
+// 			defer wg.Done()
+// 			if err := c.restoreTargetOutputs(dir, outputs); err != nil {
+// 				select {
+// 				case ch <- err:
+// 				default:
+// 				}
+// 			}
+// 		}(dir, outputs)
+// 	}
+
+// 	go func() {
+// 		wg.Wait()
+// 		close(ch)
+// 	}()
+
+// 	return <-ch
+// }

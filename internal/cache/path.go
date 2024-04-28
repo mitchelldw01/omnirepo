@@ -59,6 +59,26 @@ func getCacheableTargetPaths(dir string, includes, excludes []string) ([]string,
 	})
 }
 
+func getOutputPaths(dir string, patterns []string) ([]string, error) {
+	paths := []string{}
+	return paths, filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		normalized := filepath.Join(strings.Split(path, string(filepath.Separator))[1:]...)
+		isMatch, err := checkForMatch(normalized, patterns)
+		if err != nil {
+			return err
+		}
+		if isMatch {
+			paths = append(paths, path)
+		}
+
+		return nil
+	})
+}
+
 func checkForMatch(path string, patterns []string) (bool, error) {
 	for _, pattern := range patterns {
 		isMatch, err := doublestar.Match(pattern, path)
