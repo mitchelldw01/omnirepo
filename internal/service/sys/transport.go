@@ -24,8 +24,13 @@ func (st SystemTransport) Reader(path string) (io.ReadCloser, error) {
 func (st SystemTransport) Writer(path string) (io.WriteCloser, error) {
 	dst := filepath.Join(".omni/cache", path)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return nil, fmt.Errorf("failed to write cache asset: %v", err)
+		return nil, fmt.Errorf("failed to write cache artifact: %v", err)
 	}
 
-	return os.Create(dst)
+	w, err := os.Create(dst)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write cache artifact: %v", err)
+	}
+
+	return w, nil
 }

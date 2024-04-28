@@ -14,7 +14,7 @@ type executor struct{}
 
 func (e executor) ExecuteTask(node *graph.Node, dependencies map[string]struct{}) {}
 
-func (e executor) CleanUp(starTime time.Time) {}
+func (e executor) FinalizeResults(t time.Time) {}
 
 func TestPopulateNodes(t *testing.T) {
 	type expected struct {

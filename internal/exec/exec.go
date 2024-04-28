@@ -13,23 +13,27 @@ import (
 	"github.com/mitchelldw01/omnirepo/internal/log"
 )
 
-// Reads, writes, and retrieves assets from the cache.
-type Cacher interface {
-	IsClean(node *graph.Node, deps map[string]struct{}) (bool, error)
-	GetTaskResult(dir, name string) (cache.TaskResult, error)
+type CacheReader interface {
+	GetCachedResult(dir, name string) (cache.TaskResult, error)
+	Validate(node *graph.Node, deps map[string]struct{}) (bool, error)
+}
+
+type CacheWriter interface {
 	WriteTaskResult(dir, name string, res cache.TaskResult) error
-	CleanUp() error
+	Update() error
 }
 
 type Executor struct {
-	cache   Cacher
+	reader  CacheReader
+	writer  CacheWriter
 	noCache bool
 	metrics *runtimeMetrics
 }
 
-func NewExecutor(cache Cacher, noCache bool) *Executor {
+func NewExecutor(cr CacheReader, cw CacheWriter, noCache bool) *Executor {
 	return &Executor{
-		cache:   cache,
+		reader:  cr,
+		writer:  cw,
 		noCache: noCache,
 		metrics: newRuntimeMetrics(),
 	}
@@ -55,14 +59,14 @@ func (e *Executor) hasFailedDependency(deps map[string]struct{}) bool {
 }
 
 func (e *Executor) executeTaskHelper(node *graph.Node, deps map[string]struct{}) error {
-	isClean, err := e.cache.IsClean(node, deps)
+	valid, err := e.reader.Validate(node, deps)
 	if err != nil {
 		return err
 	}
 
 	var res cache.TaskResult
-	if isClean {
-		res, err = e.cache.GetTaskResult(node.Dir, node.Name)
+	if valid {
+		res, err = e.reader.GetCachedResult(node.Dir, node.Name)
 	} else {
 		res = e.executeTaskCommand(node.Pipeline.Command, node.Dir)
 	}
@@ -70,20 +74,20 @@ func (e *Executor) executeTaskHelper(node *graph.Node, deps map[string]struct{})
 		return err
 	}
 
-	return e.processTaskResult(node, isClean, res)
+	return e.processTaskResult(node, valid, res)
 }
 
 func (e *Executor) processTaskResult(node *graph.Node, isClean bool, res cache.TaskResult) error {
 	e.metrics.total.increment()
-	if res.IsFailed {
+	if res.Failed {
 		e.metrics.failed.put(node.Id)
 	}
 
 	var logs string
 	if isClean {
-		logs = "cache hit, replaying logs...\n" + res.Output
+		logs = "cache hit, replaying logs...\n" + res.Logs
 	} else {
-		logs = "cache miss, executing task...\n" + res.Output
+		logs = "cache miss, executing task...\n" + res.Logs
 	}
 
 	log.TaskOutput(node.Id, logs)
@@ -92,7 +96,7 @@ func (e *Executor) processTaskResult(node *graph.Node, isClean bool, res cache.T
 		return nil
 	}
 
-	return e.cache.WriteTaskResult(node.Dir, node.Name, res)
+	return e.writer.WriteTaskResult(node.Dir, node.Name, res)
 }
 
 func (e *Executor) executeTaskCommand(command, dir string) cache.TaskResult {
@@ -110,11 +114,11 @@ func (e *Executor) executeTaskCommand(command, dir string) cache.TaskResult {
 	cmd.Dir = dir
 
 	err := cmd.Run()
-	return cache.NewTaskResult(err != nil, strings.TrimSpace(buf.String()))
+	return cache.NewTaskResult(strings.TrimSpace(buf.String()), err != nil)
 }
 
-func (e *Executor) CleanUp(t time.Time) {
-	if err := e.cache.CleanUp(); err != nil {
+func (e *Executor) FinalizeResults(t time.Time) {
+	if err := e.writer.Update(); err != nil {
 		e.metrics.errors.append(err)
 	}
 

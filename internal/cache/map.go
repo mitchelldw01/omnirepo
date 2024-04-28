@@ -7,6 +7,56 @@ import (
 	"sync"
 )
 
+type concurrentMap[T any] struct {
+	data  map[string]T
+	mutex sync.RWMutex
+}
+
+func newConcurrentMap[T any]() *concurrentMap[T] {
+	return &concurrentMap[T]{
+		data:  map[string]T{},
+		mutex: sync.RWMutex{},
+	}
+}
+
+func (cm *concurrentMap[T]) get(key string) (T, bool) {
+	cm.mutex.RLock()
+	val, ok := cm.data[key]
+	cm.mutex.RUnlock()
+	return val, ok
+}
+
+func (cm *concurrentMap[T]) put(key string, val T) {
+	cm.mutex.Lock()
+	cm.data[key] = val
+	cm.mutex.Unlock()
+}
+
+func (cm *concurrentMap[T]) contains(keys ...string) bool {
+	cm.mutex.RLock()
+	defer cm.mutex.RUnlock()
+
+	for _, key := range keys {
+		if _, ok := cm.data[key]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (cm *concurrentMap[T]) loadFromReader(r io.Reader) error {
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return fmt.Errorf("failed to read from reader: %v", err)
+	}
+
+	if err := json.Unmarshal(b, &cm.data); err != nil {
+		return fmt.Errorf("failed to unmarshal reader data: %v", err)
+	}
+	return nil
+}
+
 type nestedConcurrentMap[T any] struct {
 	data  map[string]*concurrentMap[T]
 	mutex sync.Mutex
@@ -38,63 +88,9 @@ func (ncm *nestedConcurrentMap[T]) getOrPut(key string) (*concurrentMap[T], bool
 }
 
 func (ncm *nestedConcurrentMap[T]) toUnsafeMap() map[string]map[string]T {
-	set := map[string]map[string]T{}
+	hashMap := map[string]map[string]T{}
 	for key, val := range ncm.data {
-		set[key] = val.toUnsafeMap()
+		hashMap[key] = val.data
 	}
-	return set
-}
-
-type concurrentMap[T any] struct {
-	data  map[string]T
-	mutex sync.RWMutex
-}
-
-func newConcurrentMap[T any]() *concurrentMap[T] {
-	return &concurrentMap[T]{
-		data:  map[string]T{},
-		mutex: sync.RWMutex{},
-	}
-}
-
-func (cm *concurrentMap[T]) get(key string) (T, bool) {
-	cm.mutex.RLock()
-	val, ok := cm.data[key]
-	cm.mutex.RUnlock()
-	return val, ok
-}
-
-func (cm *concurrentMap[T]) put(key string, val T) {
-	cm.mutex.Lock()
-	cm.data[key] = val
-	cm.mutex.Unlock()
-}
-
-func (cm *concurrentMap[T]) toUnsafeMap() map[string]T {
-	return cm.data
-}
-
-func (cm *concurrentMap[T]) contains(keys ...string) bool {
-	cm.mutex.RLock()
-	defer cm.mutex.RUnlock()
-
-	for _, key := range keys {
-		if _, ok := cm.data[key]; !ok {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (cm *concurrentMap[T]) loadFromReader(r io.Reader) error {
-	b, err := io.ReadAll(r)
-	if err != nil {
-		return fmt.Errorf("failed to read workspace cache: %v", err)
-	}
-
-	if err := json.Unmarshal(b, &cm.data); err != nil {
-		return fmt.Errorf("failed to unmarshal workspace cache: %v", err)
-	}
-	return nil
+	return hashMap
 }

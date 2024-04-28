@@ -61,7 +61,7 @@ func (t *AwsTransport) Reader(key string) (io.ReadCloser, error) {
 func (t *AwsTransport) Writer(key string) (io.WriteCloser, error) {
 	tmp, err := os.CreateTemp("", "aws-")
 	if err != nil {
-		return nil, fmt.Errorf("failed to write cache asset: %v", err)
+		return nil, fmt.Errorf("failed to write cache artifact: %v", err)
 	}
 
 	return &AwsUploader{
@@ -80,13 +80,17 @@ type AwsUploader struct {
 }
 
 func (u *AwsUploader) Write(b []byte) (int, error) {
-	return u.file.Write(b)
+	n, err := u.file.Write(b)
+	if err != nil {
+		return n, fmt.Errorf("failed to write cache artifact: %v", err)
+	}
+	return n, nil
 }
 
 func (u *AwsUploader) Close() error {
 	defer u.file.Close()
 	if _, err := u.file.Seek(0, io.SeekStart); err != nil {
-		return fmt.Errorf("failed to write cache asset: %v", err)
+		return fmt.Errorf("failed to write cache artifact: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -98,7 +102,7 @@ func (u *AwsUploader) Close() error {
 		Body:   u.file,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to write cache asset: %v", err)
+		return fmt.Errorf("failed to write cache artifact: %v", err)
 	}
 
 	return nil
