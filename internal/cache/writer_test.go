@@ -130,7 +130,7 @@ func TestUpdate(t *testing.T) {
 		}
 	})
 
-	t.Run("should create the foo-meta.tar.zst with the correct contents", func(t *testing.T) {
+	t.Run("should create the bar-meta.tar.zst with the correct contents", func(t *testing.T) {
 		path := filepath.Join(work, ".omni/cache/bar-meta.tar.zst")
 		headers := []string{"inputs.json", "results/test.json"}
 		ok, err := checkTarZstContents(path, headers)
@@ -217,7 +217,7 @@ func checkTarZstContents(path string, headers []string) (bool, error) {
 	}
 
 	if ok := checkAllContentsExist(pathMap, headers); !ok {
-		return false, fmt.Errorf("not all contents are found in the tar file")
+		return false, err
 	}
 
 	return true, nil
