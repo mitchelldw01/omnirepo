@@ -24,16 +24,16 @@ type CacheWriter interface {
 }
 
 type Executor struct {
-	reader  CacheReader
-	writer  CacheWriter
-	metrics *runtimeMetrics
+	reader CacheReader
+	writer CacheWriter
+	stats  *statistics
 }
 
 func NewExecutor(cr CacheReader, cw CacheWriter) *Executor {
 	return &Executor{
-		reader:  cr,
-		writer:  cw,
-		metrics: newRuntimeMetrics(),
+		reader: cr,
+		writer: cw,
+		stats:  newStatistics(),
 	}
 }
 
@@ -43,13 +43,13 @@ func (e *Executor) ExecuteTask(node *graph.Node, deps map[string]struct{}) {
 	}
 
 	if err := e.executeTaskHelper(node, deps); err != nil {
-		e.metrics.errors.append(err)
+		e.stats.errors.append(err)
 	}
 }
 
 func (e *Executor) hasFailedDependency(deps map[string]struct{}) bool {
 	for id := range deps {
-		if e.metrics.failed.contains(id) {
+		if e.stats.failed.contains(id) {
 			return true
 		}
 	}
@@ -76,9 +76,9 @@ func (e *Executor) executeTaskHelper(node *graph.Node, deps map[string]struct{})
 }
 
 func (e *Executor) processTaskResult(node *graph.Node, isClean bool, res cache.TaskResult) error {
-	e.metrics.total.increment()
+	e.stats.total.increment()
 	if res.Failed {
-		e.metrics.failed.put(node.Id)
+		e.stats.failed.put(node.Id)
 	}
 
 	var logs string
@@ -90,7 +90,7 @@ func (e *Executor) processTaskResult(node *graph.Node, isClean bool, res cache.T
 
 	log.TaskOutput(node.Id, logs)
 	if isClean {
-		e.metrics.hits.increment()
+		e.stats.hits.increment()
 		return nil
 	}
 
@@ -117,16 +117,16 @@ func (e *Executor) executeTaskCommand(command, dir string) cache.TaskResult {
 
 func (e *Executor) FinalizeResults(t time.Time) {
 	if err := e.writer.Update(); err != nil {
-		e.metrics.errors.append(err)
+		e.stats.errors.append(err)
 	}
 
-	hits := e.metrics.hits.val
-	total := e.metrics.total.val
-	failed := len(e.metrics.failed.val)
+	hits := e.stats.hits.val
+	total := e.stats.total.val
+	failed := len(e.stats.failed.val)
 	duration := time.Since(t)
 	log.Metrics(hits, total, failed, duration)
 
-	for _, err := range e.metrics.errors.val {
+	for _, err := range e.stats.errors.val {
 		fmt.Print("\n")
 		log.Error(err)
 	}
