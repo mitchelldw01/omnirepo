@@ -33,7 +33,7 @@ func NewCacheWriter(tw TransportWriter, cr *CacheReader) *CacheWriter {
 	return &CacheWriter{
 		transport: tw,
 		reader:    cr,
-		tmpCache:  filepath.Join(os.TempDir(), "omni-prev-cache"),
+		tmpCache:  filepath.Join(os.TempDir(), "omni-next-cache"),
 	}
 }
 
@@ -56,6 +56,10 @@ func (w *CacheWriter) WriteTaskResult(dir, name string, res TaskResult) error {
 }
 
 func (w *CacheWriter) Update() error {
+	if err := w.restoreOutputs(); err != nil {
+		return fmt.Errorf("failed to restore cached outputs: %v", err)
+	}
+
 	if w.reader.isWorkValid && w.reader.invalidNodes.size() == 0 {
 		return nil
 	}
@@ -73,10 +77,6 @@ func (w *CacheWriter) Update() error {
 		if err := w.updateTarget(dir, connMap); err != nil {
 			return err
 		}
-	}
-
-	if err := w.restoreOutputs(); err != nil {
-		return fmt.Errorf("failed to restore cached outputs: %v", err)
 	}
 
 	return nil
