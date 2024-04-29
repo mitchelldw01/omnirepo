@@ -54,6 +54,7 @@ func (cm *concurrentMap[T]) loadFromReader(r io.Reader) error {
 	if err := json.Unmarshal(b, &cm.data); err != nil {
 		return fmt.Errorf("failed to unmarshal reader data: %v", err)
 	}
+
 	return nil
 }
 

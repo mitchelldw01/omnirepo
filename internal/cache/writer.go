@@ -60,7 +60,7 @@ func (w *CacheWriter) Update() error {
 		return fmt.Errorf("failed to restore cached outputs: %v", err)
 	}
 
-	if w.reader.isWorkValid && w.reader.invalidNodes.size() == 0 {
+	if w.reader.invalidNodes.size() == 0 {
 		return nil
 	}
 
@@ -100,10 +100,6 @@ func (w *CacheWriter) startSpinner() (*spinner.Spinner, error) {
 }
 
 func (w *CacheWriter) updateWorkspace() error {
-	if w.reader.isWorkValid {
-		return nil
-	}
-
 	paths, err := w.getWorkspacePaths()
 	if err != nil {
 		return err
@@ -119,8 +115,8 @@ func (w *CacheWriter) updateWorkspace() error {
 
 func (w *CacheWriter) getWorkspacePaths() ([]string, error) {
 	patternSet := map[string]struct{}{}
-	for _, cfg := range w.reader.targetConfigs {
-		for _, pattern := range cfg.WorkspaceAssets {
+	for dir := range w.reader.invalidNodes.toUnsafeMap() {
+		for _, pattern := range w.reader.targetConfigs[dir].WorkspaceAssets {
 			patternSet[pattern] = struct{}{}
 		}
 	}

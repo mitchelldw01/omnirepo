@@ -36,7 +36,6 @@ type CacheReader struct {
 	invalidNodes *nestedConcurrentMap[struct{}]
 	// Ensures thread-safe initializion of the workspace cache
 	initWorkLock sync.Mutex
-	isWorkValid  bool
 	noCache      bool
 }
 
@@ -61,7 +60,6 @@ func NewCacheReader(
 		targetCache:   newNestedConcurrentMap[struct{}](),
 		invalidNodes:  newNestedConcurrentMap[struct{}](),
 		initWorkLock:  sync.Mutex{},
-		isWorkValid:   true,
 		noCache:       noCache,
 	}
 }
@@ -103,7 +101,7 @@ func (r *CacheReader) Validate(node *graph.Node, deps map[string]struct{}) (bool
 }
 
 func (r *CacheReader) validateAll(node *graph.Node, deps map[string]struct{}) (bool, error) {
-	if !r.isWorkValid || r.hasInvalidDependency(deps) {
+	if r.hasInvalidDependency(deps) {
 		return false, nil
 	}
 
@@ -112,7 +110,6 @@ func (r *CacheReader) validateAll(node *graph.Node, deps map[string]struct{}) (b
 		return false, err
 	}
 	if !isWorkClean {
-		r.isWorkValid = false
 		return false, nil
 	}
 
@@ -137,7 +134,8 @@ func (r *CacheReader) hasInvalidDependency(deps map[string]struct{}) bool {
 }
 
 func (r *CacheReader) validateWorkspace(dir string) (bool, error) {
-	paths, err := getCacheableWorkspacePaths(r.targetConfigs[dir].WorkspaceAssets, r.targets)
+	workAssets := r.targetConfigs[dir].WorkspaceAssets
+	paths, err := getCacheableWorkspacePaths(workAssets, r.targets)
 	if err != nil {
 		return false, err
 	}
