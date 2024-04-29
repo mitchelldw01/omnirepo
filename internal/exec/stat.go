@@ -2,15 +2,15 @@ package exec
 
 import "sync"
 
-type runtimeMetrics struct {
-	hits   *intMetric
-	total  *intMetric
-	failed *mapMetric
-	errors *errorMetric
+type statistics struct {
+	hits   *intStatistic
+	total  *intStatistic
+	failed *mapStatistic
+	errors *errorStatistic
 }
 
-func newRuntimeMetrics() *runtimeMetrics {
-	return &runtimeMetrics{
+func newStatistics() *statistics {
+	return &statistics{
 		hits:   newIntMetric(),
 		total:  newIntMetric(),
 		failed: newMapMetric(),
@@ -18,61 +18,61 @@ func newRuntimeMetrics() *runtimeMetrics {
 	}
 }
 
-type intMetric struct {
+type intStatistic struct {
 	val   int
 	mutex sync.Mutex
 }
 
-func newIntMetric() *intMetric {
-	return &intMetric{
+func newIntMetric() *intStatistic {
+	return &intStatistic{
 		mutex: sync.Mutex{},
 	}
 }
 
-func (m *intMetric) increment() {
+func (m *intStatistic) increment() {
 	m.mutex.Lock()
 	m.val += 1
 	m.mutex.Unlock()
 }
 
-type mapMetric struct {
+type mapStatistic struct {
 	val   map[string]struct{}
 	mutex sync.Mutex
 }
 
-func newMapMetric() *mapMetric {
-	return &mapMetric{
+func newMapMetric() *mapStatistic {
+	return &mapStatistic{
 		val:   map[string]struct{}{},
 		mutex: sync.Mutex{},
 	}
 }
 
-func (m *mapMetric) contains(key string) bool {
+func (m *mapStatistic) contains(key string) bool {
 	m.mutex.Lock()
 	_, ok := m.val[key]
 	m.mutex.Unlock()
 	return ok
 }
 
-func (m *mapMetric) put(key string) {
+func (m *mapStatistic) put(key string) {
 	m.mutex.Lock()
 	m.val[key] = struct{}{}
 	m.mutex.Unlock()
 }
 
-type errorMetric struct {
+type errorStatistic struct {
 	val   []error
 	mutex sync.Mutex
 }
 
-func newErrorMetric() *errorMetric {
-	return &errorMetric{
+func newErrorMetric() *errorStatistic {
+	return &errorStatistic{
 		val:   []error{},
 		mutex: sync.Mutex{},
 	}
 }
 
-func (metric *errorMetric) append(err error) {
+func (metric *errorStatistic) append(err error) {
 	metric.mutex.Lock()
 	metric.val = append(metric.val, err)
 	metric.mutex.Unlock()
